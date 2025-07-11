@@ -1,0 +1,335 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Expo Project Foundation",
+        "description": "Bootstrap Expo project with React Native Navigation, TypeScript, and basic project structure",
+        "details": "Initialize Expo project using `npx create-expo-app SwipeJokes --template`. Configure TypeScript, install @react-navigation/native, @react-navigation/stack, @react-navigation/bottom-tabs. Setup basic folder structure: src/components, src/screens, src/services, src/types. Configure metro.config.js and app.json with proper settings.",
+        "testStrategy": "Verify project builds successfully with `expo start`, navigation works between screens, TypeScript compilation passes without errors",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Expo Project with Template",
+            "description": "Create the initial Expo project using the specified template and verify the basic setup",
+            "dependencies": [],
+            "details": "Run `npx create-expo-app SwipeJokes --template` to bootstrap the project. Navigate to the project directory and verify the initial structure is created correctly. Run `npm start` or `expo start` to ensure the basic setup works.",
+            "status": "done",
+            "testStrategy": "Verify project starts without errors and displays the default Expo welcome screen"
+          },
+          {
+            "id": 2,
+            "title": "Configure TypeScript Support",
+            "description": "Set up TypeScript configuration and ensure proper type checking throughout the project",
+            "dependencies": [
+              1
+            ],
+            "details": "Install TypeScript dependencies: `npm install --save-dev typescript @types/react @types/react-native`. Create tsconfig.json with appropriate compiler options for React Native. Rename App.js to App.tsx and update any type-related issues. Configure VS Code or preferred IDE for TypeScript support.",
+            "status": "done",
+            "testStrategy": "Run `npx tsc --noEmit` to verify TypeScript compilation without errors"
+          },
+          {
+            "id": 3,
+            "title": "Install and Configure React Navigation",
+            "description": "Set up React Navigation with stack and bottom tab navigators for app navigation structure",
+            "dependencies": [
+              2
+            ],
+            "details": "Install navigation packages: `npm install @react-navigation/native @react-navigation/stack @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context`. For Expo managed workflow, run `expo install react-native-screens react-native-safe-area-context`. Create basic navigation structure with NavigationContainer in App.tsx.",
+            "status": "done",
+            "testStrategy": "Create a simple test navigation between two dummy screens to verify navigation works"
+          },
+          {
+            "id": 4,
+            "title": "Setup Project Folder Structure",
+            "description": "Create organized folder structure for scalable development with proper separation of concerns",
+            "dependencies": [
+              2
+            ],
+            "details": "Create src/ directory with subdirectories: components/, screens/, services/, types/, utils/, constants/. Move App.tsx to src/ and update import paths. Create index.ts files for clean exports. Setup absolute imports by configuring babel.config.js and tsconfig.json with path mapping.",
+            "status": "done",
+            "testStrategy": "Verify all imports work correctly and no relative path imports are breaking"
+          },
+          {
+            "id": 5,
+            "title": "Configure Metro and App Settings",
+            "description": "Optimize Metro bundler configuration and app.json settings for development and production",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Update metro.config.js with resolver settings for absolute imports and optimized bundling. Configure app.json with proper app name, slug, version, orientation settings, splash screen, and icon placeholders. Set up environment-specific configurations and ensure proper asset handling.",
+            "status": "done",
+            "testStrategy": "Build the app using `expo build` or `eas build` to verify configuration is correct and no bundling errors occur"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement Local SQLite Database Schema",
+        "description": "Setup SQLite database with schema for local joke storage, user preferences, and history tracking",
+        "details": "Install expo-sqlite. Create database schema with tables: jokes(id, txt, lang, created_at, creator, is_flagged), user_preferences(id, locale, push_token), user_joke_feedback(id, user_id, joke_id, sentiment, ts), seen_jokes(user_id, joke_id, ts), favorites(user_id, joke_id, ts). Implement database initialization, migration logic, and CRUD operations using prepared statements.",
+        "testStrategy": "Test database creation, table schema validation, insert/select operations, and migration scripts work correctly",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install and Configure expo-sqlite Package",
+            "description": "Install the expo-sqlite package and set up the basic database configuration for the React Native Expo application",
+            "dependencies": [],
+            "details": "Run 'npm install expo-sqlite' or 'expo install expo-sqlite'. Create a database configuration file that defines database name, version, and connection settings. Set up the basic database connection utilities and error handling for SQLite operations.",
+            "status": "done",
+            "testStrategy": "Verify package installation and basic database connection can be established without errors"
+          },
+          {
+            "id": 2,
+            "title": "Create Database Schema and Tables",
+            "description": "Define and create all required database tables with proper schema definitions, constraints, and indexes",
+            "dependencies": [
+              1
+            ],
+            "details": "Create SQL DDL statements for all tables: jokes(id INTEGER PRIMARY KEY, txt TEXT NOT NULL, lang TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, creator TEXT, is_flagged BOOLEAN DEFAULT 0), user_preferences(id INTEGER PRIMARY KEY, locale TEXT, push_token TEXT), user_joke_feedback(id INTEGER PRIMARY KEY, user_id TEXT, joke_id INTEGER, sentiment TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP), seen_jokes(user_id TEXT, joke_id INTEGER, ts DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, joke_id)), favorites(user_id TEXT, joke_id INTEGER, ts DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, joke_id)). Add appropriate foreign key constraints and indexes for performance.",
+            "status": "done",
+            "testStrategy": "Verify all tables are created with correct schema using SQLite introspection queries"
+          },
+          {
+            "id": 3,
+            "title": "Implement Database Initialization and Migration Logic",
+            "description": "Create database initialization system with version management and migration capabilities for schema updates",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement database initialization function that creates tables on first run. Create migration system with version tracking table to handle schema updates. Implement migration runner that can execute migration scripts in sequence. Add database version checking and automatic migration on app startup. Handle database creation, upgrade, and error recovery scenarios.",
+            "status": "done",
+            "testStrategy": "Test database initialization on fresh install and migration from different schema versions"
+          },
+          {
+            "id": 4,
+            "title": "Develop CRUD Operations with Prepared Statements",
+            "description": "Implement all Create, Read, Update, Delete operations for each table using secure prepared statements",
+            "dependencies": [
+              3
+            ],
+            "details": "Create repository classes or modules for each table with full CRUD operations. Implement prepared statements for all database operations to prevent SQL injection. Create functions for: inserting/updating/deleting jokes, managing user preferences, recording joke feedback and views, managing favorites. Include batch operations for bulk inserts and transactions for atomic operations. Add proper error handling and logging for all database operations.",
+            "status": "pending",
+            "testStrategy": "Unit tests for each CRUD operation, test with various data types and edge cases, verify prepared statements prevent SQL injection"
+          },
+          {
+            "id": 5,
+            "title": "Create Database Service Layer and API Integration",
+            "description": "Build a service layer that abstracts database operations and provides a clean API for the application to use",
+            "dependencies": [
+              4
+            ],
+            "details": "Create a database service class that encapsulates all database operations and provides a clean interface for the app. Implement methods for common operations like getting random jokes, tracking user interactions, managing favorites, and retrieving user history. Add connection pooling, transaction management, and database health checks. Create utility functions for data serialization/deserialization and type safety. Implement proper cleanup and connection management.",
+            "status": "pending",
+            "testStrategy": "Integration tests for the service layer, test concurrent operations, verify transaction rollback on errors, and test database cleanup"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Create Swipe-Based Joke Card UI",
+        "description": "Build the core swipe interface with gesture handling for Like/Neutral/Dislike reactions",
+        "details": "Install react-native-gesture-handler and react-native-reanimated. Create JokeCard component with Tinder-style swipe gestures. Implement PanGestureHandler with animations for swipe directions (left=dislike, right=like, up=neutral). Add visual feedback with color overlays (green/grey/red). Include pull-to-refresh functionality as backup to swipes. Ensure one-handed operation on 5-inch phones.",
+        "testStrategy": "Test swipe gestures work smoothly, visual feedback appears correctly, animations perform at 60fps, accessibility features work with VoiceOver/TalkBack",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Implement Static Seed Jokes Feed",
+        "description": "Create initial joke feed with hard-coded seed jokes to validate core UX flow",
+        "details": "Create seed jokes dataset with 100+ jokes in multiple languages (EN, ES, FR). Each joke tagged with style, format, topic, tone. Implement local joke service to fetch next unseen joke, track seen jokes, handle user feedback. Create joke display logic with proper text formatting and language detection. Ensure < 2s latency for next joke.",
+        "testStrategy": "Verify jokes display correctly, no duplicates shown, feedback recording works, different languages render properly, performance meets latency requirements",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Build User Preferences and Settings",
+        "description": "Create settings screen with language selection, notification preferences, and user onboarding flow",
+        "details": "Install react-native-i18next for internationalization. Create Settings screen with language picker (ISO-639-1 codes), notification toggle, content filtering options. Implement first-launch onboarding flow with language and category quick-pick. Store user preferences in SQLite. Add language chip in top bar for quick switching.",
+        "testStrategy": "Test language switching updates UI immediately, preferences persist between app launches, onboarding flow completes successfully, i18n strings load correctly",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement History and Favorites System",
+        "description": "Create screens to view joke history, manage favorites, and enable sharing functionality",
+        "details": "Create History and Favorites screens with paginated lists. Implement star/favorite toggle on joke cards. Add filtering by language, tag, and sentiment. Install expo-sharing and expo-clipboard for sharing functionality. Create share sheet integration with native OS sharing. Add search functionality within history.",
+        "testStrategy": "Test favorites persist correctly, history pagination works, sharing to different apps succeeds, search returns accurate results, offline functionality works",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Setup FastAPI Backend Gateway",
+        "description": "Create FastAPI server with JWT authentication, rate limiting, and basic API endpoints",
+        "details": "Setup FastAPI project with uvicorn. Implement JWT authentication with device UUID registration. Add rate limiting middleware using slowapi. Create API endpoints: POST /next_joke, POST /feedback, GET /history. Setup CORS for mobile app. Configure environment variables and logging. Add request validation with Pydantic models.",
+        "testStrategy": "Test API endpoints respond correctly, JWT tokens work, rate limiting blocks excessive requests, CORS allows mobile app access, error handling returns proper status codes",
+        "priority": "high",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize FastAPI Project Structure",
+            "description": "Set up the basic FastAPI project with proper directory structure, dependencies, and configuration files",
+            "dependencies": [],
+            "details": "Create main.py with FastAPI app instance. Setup requirements.txt with fastapi, uvicorn, python-jose, passlib, slowapi, python-multipart. Create config.py for environment variables. Setup basic project structure with routes/, models/, middleware/, and utils/ directories. Configure uvicorn server settings.",
+            "status": "done",
+            "testStrategy": "Test server startup and basic health check endpoint"
+          },
+          {
+            "id": 2,
+            "title": "Implement JWT Authentication System",
+            "description": "Create JWT token generation, validation, and device UUID registration system",
+            "dependencies": [
+              1
+            ],
+            "details": "Create auth utilities in utils/auth.py for JWT token creation and validation. Implement device registration endpoint that accepts UUID and returns JWT token. Create authentication middleware to validate tokens on protected routes. Setup password hashing utilities. Configure JWT secret key and expiration settings in environment variables.",
+            "status": "done",
+            "testStrategy": "Test device registration, token generation, and protected route access"
+          },
+          {
+            "id": 3,
+            "title": "Add Rate Limiting Middleware",
+            "description": "Implement rate limiting using slowapi to control API request frequency",
+            "dependencies": [
+              1
+            ],
+            "details": "Install and configure slowapi with Redis or in-memory backend. Create rate limiting middleware in middleware/rate_limit.py. Configure different rate limits for different endpoints (e.g., 100 requests/hour for jokes, 10 requests/hour for feedback). Add rate limit headers to responses. Handle rate limit exceeded responses with proper HTTP status codes.",
+            "status": "pending",
+            "testStrategy": "Test rate limiting by making multiple rapid requests and verifying limits are enforced"
+          },
+          {
+            "id": 4,
+            "title": "Create API Endpoints with Pydantic Models",
+            "description": "Implement the core API endpoints with proper request/response validation",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Create Pydantic models in models/ for request/response schemas (JokeRequest, FeedbackRequest, HistoryResponse). Implement POST /next_joke endpoint with joke generation logic. Create POST /feedback endpoint to store user feedback. Implement GET /history endpoint to retrieve user's joke history. Add proper error handling and HTTP status codes. Ensure all endpoints require JWT authentication.",
+            "status": "pending",
+            "testStrategy": "Test each endpoint with valid/invalid payloads and verify authentication requirements"
+          },
+          {
+            "id": 5,
+            "title": "Configure CORS, Logging, and Environment Setup",
+            "description": "Setup CORS for mobile app communication, configure logging, and finalize environment configuration",
+            "dependencies": [
+              4
+            ],
+            "details": "Configure CORS middleware to allow mobile app origins. Setup structured logging with appropriate log levels and formats. Create .env.example file with all required environment variables. Add comprehensive error handling and logging throughout the application. Configure production-ready settings for deployment. Add health check endpoint for monitoring.",
+            "status": "pending",
+            "testStrategy": "Test CORS functionality from mobile app, verify logging output, and test all environment configurations"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Setup PostgreSQL Database and Models",
+        "description": "Configure PostgreSQL database with proper schema and implement data access layer",
+        "details": "Setup PostgreSQL database with tables: jokes, tags, joke_tags, users, user_tag_scores, user_joke_feedback, seen_jokes. Use SQLAlchemy ORM with async support. Implement database models, relationships, and indexes for performance. Setup Alembic for database migrations. Add connection pooling and proper error handling.",
+        "testStrategy": "Test database connections work, models save/retrieve correctly, migrations run successfully, indexes improve query performance, concurrent access handled properly",
+        "priority": "high",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Build Tag-Based Personalization System",
+        "description": "Implement joke tagging system and user preference learning algorithm",
+        "details": "Create tag taxonomy with 4 axes: style, format, topic, tone. Implement user_tag_scores tracking system. Build recommendation algorithm using weighted tag scoring with ε-greedy exploration (90% exploitation, 10% exploration). Create background job to update user preferences based on feedback. Setup Redis caching for hot joke IDs and user preferences.",
+        "testStrategy": "Test tag scoring algorithm improves recommendations, ε-greedy exploration works, user preferences update correctly, Redis caching reduces database load, recommendation quality improves over time",
+        "priority": "medium",
+        "dependencies": [
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Integrate AI Joke Generation and Moderation",
+        "description": "Implement OpenAI integration for joke generation with content moderation and safety filtering",
+        "details": "Setup OpenAI API client with GPT-4o integration. Create joke generation prompts based on user preferences and language. Implement content moderation using OpenAI Moderation API. Add fallback logic when no unseen jokes match user preferences. Create background job for batch joke generation. Implement cost controls and usage monitoring.",
+        "testStrategy": "Test AI generates appropriate jokes, moderation filters unsafe content, fallback logic prevents empty feeds, cost controls prevent budget overrun, generated jokes match requested tags and language",
+        "priority": "medium",
+        "dependencies": [
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Setup Daily Push Notifications",
+        "description": "Implement opt-in daily joke notifications using Expo push notification service",
+        "details": "Install expo-notifications and configure push notification setup. Create opt-in notification preference in settings. Implement local notification scheduling with cached jokes. Setup background job to prepare daily jokes. Handle notification tap to open app directly to specific joke. Add notification permission handling and fallback for denied permissions.",
+        "testStrategy": "Test notifications trigger at scheduled times, tapping opens correct joke, permission handling works gracefully, background job runs reliably, notification content displays correctly",
+        "priority": "low",
+        "dependencies": [
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Integrate Mobile App with Backend API",
+        "description": "Connect mobile app to backend services and implement offline-first architecture",
+        "details": "Replace local seed jokes with API integration. Implement offline-first architecture with local SQLite cache. Add network error handling and retry logic. Setup background sync for user feedback. Implement exponential backoff for API failures. Add loading states and error messages. Ensure app works offline with cached content.",
+        "testStrategy": "Test API integration works reliably, offline mode functions correctly, sync resolves conflicts properly, error handling provides good UX, loading states appear appropriately, network issues don't crash app",
+        "priority": "high",
+        "dependencies": [
+          4,
+          7,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-10T15:22:16.429Z",
+      "updated": "2025-07-11T13:38:38.711Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

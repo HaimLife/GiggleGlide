@@ -1,0 +1,140 @@
+<context>
+
+# Overview
+
+**Product Name**: *SwipeJokes (working title)*
+
+SwipeJokes is a mobile‐only, swipe-based jokes application that delivers one joke at a time, lets users react with **Like / Neutral / Dislike**, and instantly learns their humor tastes.
+It solves the *“I need a quick laugh that suits **me**”* problem by combining:
+
+* **Adaptive content** – jokes are tagged (type · topic · tone · format · language) and matched to each user’s evolving preference scores.
+* **Multilingual support** – jokes (and UI) are available in multiple languages, opening the app to global audiences and language learners.
+* **Instant gratification** – a single tap (or pull-to-refresh) produces the next unseen joke with < 2 s latency, even on modest networks.
+
+The result is a lightweight entertainment app that feels personal, endlessly fresh, and share-worthy.
+
+---
+
+# Core Features
+
+| Feature                              | What it Does                                                     | Why It Matters                                                | High-Level How                                                                                               |
+| ------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Swipe Joke Feed**                  | Shows one joke/card; user swipes → 👍 / 😐 / 👎                  | Core loop; friction-free engagement; data for personalization | React-Native card component, gesture-handler; pull joke via `/next` API; on swipe POST `/feedback`           |
+| **Multilingual Jokes**               | Generate / fetch jokes in user-selected language; UI localizable | Expands TAM; aids language learners                           | Language picker → request `lang` param; tag each stored joke with ISO-639-1 code; i18n strings via `i18next` |
+| **Tag-Based Personalization**        | Track per-user affinity scores for every tag; rank next joke     | Keeps feed funny & sticky                                     | `user_tag_scores` table; Σ(weight×score) ranking; ε-greedy exploration                                       |
+| **Joke Bank & Generator**            | Re-use high-quality jokes; create new ones when no unseen match  | Infinite content without repeats                              | PostgreSQL joke store; fallback to OpenAI/Anthropic with tag-guided prompt; store result                     |
+| **History & Favorites**              | Persist all seen jokes; star favorites                           | Recall & share best jokes; offline value                      | SQLite on-device cache; list views with filters                                                              |
+| **Sharing & Copy**                   | Native share sheet / clipboard copy                              | Organic growth; social delight                                | RN `Share` + `expo-clipboard`                                                                                |
+| **Daily Joke Notification** (opt-in) | Schedules a local push with a new joke                           | Drives retention                                              | `expo-notifications`; uses cached joke                                                                       |
+
+---
+
+# User Experience
+
+### Personas
+
+1. **Maya (23, multilingual student)** – loves punny jokes, practices Spanish.
+2. **Dan (31, Slack joker)** – quick tech laughs, shares to colleagues.
+3. **Aisha (40, casual scroller)** – wants light, family-friendly humor during breaks.
+
+### Key Flows
+
+1. **First-Launch** → language & category quick-pick → first joke appears → swipe → next joke.
+2. **Language Switch** (settings or top-bar chip) → feed immediately serves jokes in new language.
+3. **Favorite & Share** – star → saved; tap share → OS sheet.
+4. **Daily Notification Tap** → app opens directly to that joke → continue swiping.
+
+### UI / UX Notes
+
+* Tinder-style card with large, high-contrast text; swipe zones subtly colored (green / grey / red).
+* “Pull for next joke” as backup to swipes (accessibility).
+* Minimal chrome: top bar = language chip + settings; bottom nav = History · Favorites.
+* Motion: 250 ms card slide; skeleton shimmer while loading.
+* All gestures reachable with one hand on 5-inch phone.
+
+</context>
+
+<PRD>
+
+# Technical Architecture
+
+| Layer                     | Component                                                                                               | Responsibility |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- | -------------- |
+| **Mobile (Expo)**         | UI, gesture handling, local SQLite, offline history, share/notifications                                |                |
+| **API Gateway (FastAPI)** | Auth (JWT), rate-limit, single entry for app                                                            |                |
+| **Recommender Service**   | Rank unseen jokes via tag-score vector; ε-exploration                                                   |                |
+| **Joke Service**          | CRUD jokes, fetch unseen, return serialized joke payload                                                |                |
+| **Joke Generator Agent**  | Prompt LLM with `{top_tags, lang}`; returns joke text + self-tags                                       |                |
+| **Tagger Agent**          | Zero-shot classify joke into taxonomy; verify language code                                             |                |
+| **Moderation Agent**      | Filter unsafe content before DB insert                                                                  |                |
+| **DB (PostgreSQL)**       | `jokes`, `tags`, `joke_tags`, `users`, `user_tag_scores`, `user_joke_feedback`, `seen_jokes`            |                |
+| **Cache (Redis)**         | Hot joke IDs per tag combo; user seen-set; user topTags                                                 |                |
+| **Infra**                 | Docker, Cloud Run, Pub/Sub (async agent tasks), Cloud SQL, Cloud Memorystore, Cloud Scheduler (cleanup) |                |
+
+### APIs
+
+* `POST /next_joke` – body: `{user_id}`; returns joke JSON.
+* `POST /feedback` – body: `{user_id, joke_id, sentiment}`.
+* `GET /history?user_id&lang&tag=` – paginated.
+* Internal: `/generate_joke` (Recommender → Generator).
+
+### Data Model (essentials)
+
+```sql
+jokes(id PK, txt, lang CHAR(2), created_at, creator ENUM('seed','ai'), is_flagged BOOL)
+tags(code PK, name, category)
+joke_tags(joke_id FK, tag_code FK, weight INT DEFAULT 1)
+users(id PK, locale, push_token)
+user_tag_scores(user_id, tag_code, score INT)
+user_joke_feedback(id PK, user_id, joke_id, sentiment SMALLINT, ts)
+seen_jokes(user_id, joke_id, ts)
+```
+
+# Development Roadmap
+
+| Phase                              | Scope (all atomic, releasable)                                              |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| **0 – Foundation**                 | Expo project bootstrapped; RN Navigation; Settings skeleton; SQLite schema. |
+| **1 – Static Seed Feed**           | Hard-coded seed jokes list; swipe UI; history/favorites local. (Usable!)    |
+| **2 – Remote Joke API**            | Integrate JokeAPI; category & language selectors; safe-mode filter.         |
+| **3 – Backend Core**               | FastAPI gateway; PostgreSQL; Joke Service; user registration (device UUID). |
+| **4 – Tag Taxonomy & Recommender** | Tag tables; user\_tag\_scores; ranking & ε-explore logic; adapt feed.       |
+| **5 – AI Generator & Tagger**      | OpenAI integration; moderation; store generated jokes; fallback logic.      |
+| **6 – Daily Notification**         | Expo push opt-in; scheduled local jokes.                                    |
+| **7 – Ads & Premium Toggle**       | AdMob banner after N swipes; IAP to disable ads.                            |
+| **8 – UI Polish & i18n**           | RN i18next; translate static strings; dark mode.                            |
+| **9 – Launch Hardening**           | Analytics, crash reporting, store assets, legal docs.                       |
+
+# Logical Dependency Chain
+
+1. **Swipe UI & Local Storage** – proves core UX instantly.
+2. **Remote joke retrieval** – validates content freshness.
+3. **Backend persistence & user model** – enables multi-device, no repeats.
+4. **Personalization loop** – adds differentiated value.
+5. **Generation & moderation** – infinite supply once safety net ready.
+6. **Monetization & retention hooks** after value proven.
+
+Each milestone delivers a working front-end; backend upgrades slot in transparently.
+
+# Risks and Mitigations
+
+| Risk                     | Mitigation                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| **CPI > LTV**            | Soft-launch in low-cost geos first; tighten ad cadence; premium upsell.        |
+| **API downtime / quota** | Local seed cache; multi-provider fallback; exponential back-off.               |
+| **LLM cost blow-out**    | Cache generated jokes; pre-batch generation; smart prompt constraints.         |
+| **Scope creep**          | Phase gates; ship usable feature per phase; backlog anything else.             |
+
+# Appendix
+
+* **Taxonomy**: 4 tag axes – *style* (pun, irony…), *format* (one-liner, Q/A), *topic* (tech, animals…), *tone* (clean, dark).
+* **LLM Prompt Skeleton**
+
+  ```
+  "Write a {format} joke in {lang}. 
+   Must use {style} style about {topic}. Keep it ≤ 30 words."
+  ```
+* **Benchmarks**: JokeAPI latency < 500 ms EU; OpenAI GPT-4o \~2.2 s average.
+* **Device storage**: 10 000 jokes ≈ 1 MB. SQLite performant.
+
+</PRD>
