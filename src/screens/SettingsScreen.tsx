@@ -10,12 +10,14 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
+  Modal,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useTranslation } from 'react-i18next';
 import { getAvailableLanguages } from '../i18n';
 import { AppHeader } from '../components/AppHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
+import { NotificationService } from '../services/NotificationService';
 
 interface SettingsScreenProps {
   navigation?: any; // Use proper navigation type from your navigation setup
@@ -27,19 +29,28 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const [notifications, setNotifications] = useState(false);
   const [notificationTime, setNotificationTime] = useState('09:00');
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [notificationService] = useState(() => NotificationService.getInstance());
 
   // Load saved preferences on mount
   useEffect(() => {
+    initializeNotificationService();
     loadPreferences();
-    checkNotificationPermissions();
   }, []);
+
+  const initializeNotificationService = async () => {
+    try {
+      await notificationService.initialize();
+    } catch (error) {
+      console.error('Failed to initialize notification service:', error);
+    }
+  };
 
   const loadPreferences = async () => {
     try {
-      const savedPreferences = await AsyncStorage.multiGet([
-        '@GiggleGlide:darkMode',
-        '@GiggleGlide:notifications',
-        '@GiggleGlide:notificationTime',
+      const [savedPreferences, notificationSettings] = await Promise.all([
+        AsyncStorage.multiGet(['@GiggleGlide:darkMode']),
+        notificationService.getSettings(),
       ]);
 
       const preferences = Object.fromEntries(savedPreferences);
@@ -47,26 +58,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
       if (preferences['@GiggleGlide:darkMode'] !== null) {
         setDarkMode(JSON.parse(preferences['@GiggleGlide:darkMode']));
       }
-      if (preferences['@GiggleGlide:notifications'] !== null) {
-        setNotifications(JSON.parse(preferences['@GiggleGlide:notifications']));
-      }
-      if (preferences['@GiggleGlide:notificationTime']) {
-        setNotificationTime(preferences['@GiggleGlide:notificationTime']);
-      }
+      
+      setNotifications(notificationSettings.enabled);
+      setNotificationTime(notificationSettings.time);
     } catch (error) {
       console.error('Failed to load preferences:', error);
     } finally {
       setIsLoadingPreferences(false);
-    }
-  };
-
-  const checkNotificationPermissions = async () => {
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status === 'granted') {
-      const savedNotifications = await AsyncStorage.getItem('@GiggleGlide:notifications');
-      if (savedNotifications !== null) {
-        setNotifications(JSON.parse(savedNotifications));
-      }
     }
   };
 
@@ -105,57 +103,85 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   };
 
   const handleToggleNotifications = async (value: boolean) => {
-    if (value) {
-      // Request permission if enabling
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
+    try {
+      if (value) {
+        const success = await notificationService.enableNotifications(notificationTime);
+        if (!success) {
+          Alert.alert(
+            t('settings.notificationPermissionTitle'),
+            t('settings.notificationPermissionMessage'),
+            [
+              { text: t('settings.cancel'), style: 'cancel' },
+              { 
+                text: t('settings.openSettings'), 
+                onPress: () => Linking.openSettings() 
+              },
+            ]
+          );
+          return;
+        }
+      } else {
+        await notificationService.disableNotifications();
       }
       
-      if (finalStatus !== 'granted') {
-        Alert.alert(
-          t('settings.notificationPermissionTitle'),
-          t('settings.notificationPermissionMessage'),
-          [
-            { text: t('settings.cancel'), style: 'cancel' },
-            { 
-              text: t('settings.openSettings'), 
-              onPress: () => Linking.openSettings() 
-            },
-          ]
-        );
-        return;
-      }
-      
-      // Schedule daily notification
-      await scheduleDailyJokeNotification();
-    } else {
-      // Cancel all notifications if disabling
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      setNotifications(value);
+    } catch (error) {
+      console.error('Failed to toggle notifications:', error);
+      Alert.alert(
+        t('errors.general'),
+        'Failed to update notification settings. Please try again.'
+      );
     }
-    
-    setNotifications(value);
-    await AsyncStorage.setItem('@GiggleGlide:notifications', JSON.stringify(value));
   };
 
-  const scheduleDailyJokeNotification = async () => {
-    const [hours, minutes] = notificationTime.split(':').map(Number);
-    
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: t('notifications.dailyJokeTitle'),
-        body: t('notifications.dailyJokeBody'),
-        data: { type: 'daily_joke' },
-      },
-      trigger: {
-        hour: hours,
-        minute: minutes,
-        repeats: true,
-      },
-    });
+  const handleTimeChange = async (newTime: string) => {
+    try {
+      setNotificationTime(newTime);
+      
+      if (notifications) {
+        await notificationService.updateSettings({ time: newTime });
+      }
+    } catch (error) {
+      console.error('Failed to update notification time:', error);
+      Alert.alert(
+        t('errors.general'),
+        'Failed to update notification time. Please try again.'
+      );
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      const success = await notificationService.testNotification();
+      if (success) {
+        Alert.alert(
+          'Test Notification Sent',
+          'Check your notifications to see if it worked!'
+        );
+      } else {
+        Alert.alert(
+          'Test Failed',
+          'Unable to send test notification. Please check permissions.'
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send test notification:', error);
+      Alert.alert(
+        'Test Failed',
+        'Failed to send test notification.'
+      );
+    }
+  };
+
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        options.push(timeString);
+      }
+    }
+    return options;
   };
 
   if (isLoadingPreferences) {
@@ -198,16 +224,40 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
             <View style={styles.settingTextContainer}>
               <Text style={styles.settingLabel}>{t('settings.dailyJoke')}</Text>
               <Text style={styles.settingDescription}>
-                Get a daily joke notification at 9 AM
+                Get a daily joke notification at {notificationTime}
               </Text>
             </View>
             <Switch
+              testID="notification-switch"
               value={notifications}
               onValueChange={handleToggleNotifications}
               trackColor={{ false: '#767577', true: '#667eea' }}
               thumbColor={notifications ? '#764ba2' : '#f4f3f4'}
             />
           </View>
+          
+          {notifications && (
+            <>
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Notification Time</Text>
+                <TouchableOpacity
+                  testID="time-picker-button"
+                  style={styles.timeButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={styles.timeButtonText}>{notificationTime}</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity
+                testID="test-notification-button"
+                style={styles.testButton}
+                onPress={handleTestNotification}
+              >
+                <Text style={styles.testButtonText}>Send Test Notification</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* Data Management */}
@@ -269,6 +319,43 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTimePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Notification Time</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowTimePicker(false)}
+              >
+                <Text style={styles.modalCloseText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <Picker
+              testID="time-picker"
+              selectedValue={notificationTime}
+              onValueChange={handleTimeChange}
+              style={styles.timePicker}
+            >
+              {generateTimeOptions().map((time) => (
+                <Picker.Item
+                  key={time}
+                  label={time}
+                  value={time}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -380,6 +467,70 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+  },
+  timeButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  timeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  testButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#667eea',
+  },
+  testButtonText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Platform.select({ ios: 34, android: 20 }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalCloseButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+  },
+  modalCloseText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  timePicker: {
+    height: 200,
   },
 });
 

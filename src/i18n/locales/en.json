@@ -30,7 +30,10 @@
     "clearConfirm": "Are you sure you want to clear all favorites?",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "version": "Version"
+    "version": "Version",
+    "notificationPermissionTitle": "Notification Permissions",
+    "notificationPermissionMessage": "To receive daily joke notifications, please enable notifications in your device settings.",
+    "openSettings": "Open Settings"
   },
   "favorites": {
     "title": "Favorite Jokes",
@@ -137,6 +140,50 @@
     "jokesLiked": "Jokes Liked",
     "favoriteCategory": "Favorite Category",
     "viewStats": "View Stats"
+  },
+  "notifications": {
+    "dailyJokeTitle": "Daily Joke Time! 😄",
+    "dailyJokeBody": "Ready for your daily dose of laughter?",
+    "freshJokeTitle": "Fresh Joke! 😄",
+    "freshJokeBody": "Tap to see a funny joke!",
+    "testTitle": "Test Notification 🧪",
+    "testBody": "If you can see this, notifications are working!",
+    "permissions": {
+      "title": "Notification Permissions",
+      "message": "To receive daily joke notifications, please enable notifications in your device settings.",
+      "openSettings": "Open Settings",
+      "cancel": "Cancel"
+    },
+    "settings": {
+      "enabled": "Notifications Enabled",
+      "disabled": "Notifications Disabled",
+      "time": "Notification Time",
+      "selectTime": "Select notification time",
+      "testNotification": "Send Test Notification",
+      "testSent": "Test Notification Sent",
+      "testSentMessage": "Check your notifications to see if it worked!",
+      "testFailed": "Test Failed",
+      "testFailedMessage": "Unable to send test notification. Please check permissions.",
+      "updateFailed": "Update Failed",
+      "updateFailedMessage": "Failed to update notification settings. Please try again."
+    },
+    "errors": {
+      "permissionDenied": "Notification permissions denied",
+      "scheduleError": "Failed to schedule notification",
+      "updateError": "Failed to update notification settings",
+      "initError": "Failed to initialize notifications"
+    }
+  },
+  "background": {
+    "jokePreparation": "Preparing your daily jokes...",
+    "jokesPrepared": "Daily jokes prepared successfully",
+    "cacheUpdated": "Joke cache updated",
+    "status": {
+      "enabled": "Background jobs enabled",
+      "disabled": "Background jobs disabled",
+      "error": "Background job error",
+      "unsupported": "Background jobs not supported on this device"
+    }
   },
   "onboarding": {
     "welcome": {

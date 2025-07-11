@@ -8,12 +8,32 @@ import { HistoryScreen } from '../screens/HistoryScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import { RootStackParamList } from './types';
+import { navigationRef } from '../services/NavigationService';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const AppNavigator: React.FC = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer 
+      ref={navigationRef}
+      linking={{
+        prefixes: ['giggleglide://'],
+        config: {
+          screens: {
+            Home: {
+              path: '/',
+              screens: {
+                Home: 'home/:jokeId?',
+              },
+            },
+            Joke: 'joke/:jokeId',
+            Favorites: 'favorites',
+            History: 'history',
+            Settings: 'settings',
+          },
+        },
+      }}
+    >
       <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Details" component={DetailsScreen} />

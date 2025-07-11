@@ -30,7 +30,10 @@
     "clearConfirm": "¿Estás seguro de que quieres borrar todos los favoritos?",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
-    "version": "Versión"
+    "version": "Versión",
+    "notificationPermissionTitle": "Permisos de Notificación",
+    "notificationPermissionMessage": "Para recibir notificaciones diarias de chistes, habilita las notificaciones en la configuración de tu dispositivo.",
+    "openSettings": "Abrir Configuración"
   },
   "favorites": {
     "title": "Chistes Favoritos",
@@ -137,6 +140,50 @@
     "jokesLiked": "Chistes que te Gustaron",
     "favoriteCategory": "Categoría Favorita",
     "viewStats": "Ver Estadísticas"
+  },
+  "notifications": {
+    "dailyJokeTitle": "¡Hora del Chiste Diario! 😄",
+    "dailyJokeBody": "¿Listo para tu dosis diaria de risa?",
+    "freshJokeTitle": "¡Chiste Nuevo! 😄",
+    "freshJokeBody": "¡Toca para ver un chiste divertido!",
+    "testTitle": "Notificación de Prueba 🧪",
+    "testBody": "¡Si puedes ver esto, las notificaciones funcionan!",
+    "permissions": {
+      "title": "Permisos de Notificación",
+      "message": "Para recibir notificaciones diarias de chistes, habilita las notificaciones en la configuración de tu dispositivo.",
+      "openSettings": "Abrir Configuración",
+      "cancel": "Cancelar"
+    },
+    "settings": {
+      "enabled": "Notificaciones Habilitadas",
+      "disabled": "Notificaciones Deshabilitadas",
+      "time": "Hora de Notificación",
+      "selectTime": "Seleccionar hora de notificación",
+      "testNotification": "Enviar Notificación de Prueba",
+      "testSent": "Notificación de Prueba Enviada",
+      "testSentMessage": "¡Revisa tus notificaciones para ver si funcionó!",
+      "testFailed": "Prueba Fallida",
+      "testFailedMessage": "No se pudo enviar la notificación de prueba. Verifica los permisos.",
+      "updateFailed": "Actualización Fallida",
+      "updateFailedMessage": "Error al actualizar la configuración de notificaciones. Inténtalo de nuevo."
+    },
+    "errors": {
+      "permissionDenied": "Permisos de notificación denegados",
+      "scheduleError": "Error al programar la notificación",
+      "updateError": "Error al actualizar la configuración de notificaciones",
+      "initError": "Error al inicializar las notificaciones"
+    }
+  },
+  "background": {
+    "jokePreparation": "Preparando tus chistes diarios...",
+    "jokesPrepared": "Chistes diarios preparados exitosamente",
+    "cacheUpdated": "Caché de chistes actualizado",
+    "status": {
+      "enabled": "Trabajos en segundo plano habilitados",
+      "disabled": "Trabajos en segundo plano deshabilitados",
+      "error": "Error en trabajo en segundo plano",
+      "unsupported": "Trabajos en segundo plano no compatibles en este dispositivo"
+    }
   },
   "onboarding": {
     "welcome": {

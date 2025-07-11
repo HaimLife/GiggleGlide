@@ -30,7 +30,20 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-localization"
-    ]
+      "expo-localization",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#667eea",
+          "defaultChannel": "giggleglide-daily",
+          "sounds": []
+        }
+      ]
+    ],
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#667eea"
+    }
   }
 }
