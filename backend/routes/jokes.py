@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from typing import Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from typing import Dict, Any, Optional
 import random
 from datetime import datetime
 
@@ -10,6 +10,12 @@ from models.joke import (
 from models.auth import DeviceInfo
 from utils.auth import get_current_device
 from middleware.rate_limit import jokes_limit, feedback_limit
+from services.personalization_service import PersonalizationService
+from services.cache_service import get_cache_service
+from database.repositories.personalization_repository import PersonalizationRepository
+from database.repositories.tag_repository import TagRepository
+from database.repositories.joke_repository import JokeRepository
+from database.session import get_session
 
 router = APIRouter(prefix="/api", tags=["Jokes"])
 
@@ -25,18 +31,69 @@ jokes_db = [
 feedback_db: Dict[str, Dict[int, Any]] = {}  # device_id -> joke_id -> feedback
 seen_jokes_db: Dict[str, set] = {}  # device_id -> set of joke_ids
 
+
+# Dependency to get personalization service
+async def get_personalization_service(session=Depends(get_session)) -> PersonalizationService:
+    """Get personalization service instance."""
+    personalization_repo = PersonalizationRepository(session)
+    tag_repo = TagRepository(session)
+    joke_repo = JokeRepository(session)
+    
+    return PersonalizationService(
+        personalization_repo=personalization_repo,
+        tag_repo=tag_repo,
+        joke_repo=joke_repo
+    )
+
 @router.post("/next-joke", response_model=JokeResponse)
 @jokes_limit
 async def get_next_joke(
     request: Request,
     joke_request: JokeRequest,
-    device: DeviceInfo = Depends(get_current_device)
+    use_personalization: bool = Query(default=True, description="Use personalized recommendations"),
+    device: DeviceInfo = Depends(get_current_device),
+    personalization_service: PersonalizationService = Depends(get_personalization_service)
 ):
     """
-    Get the next joke for the user, excluding previously seen jokes.
+    Get the next joke for the user, with optional personalized recommendations.
     """
     device_id = device["device_id"]
     
+    # Try personalized recommendations first if enabled
+    if use_personalization:
+        try:
+            result = await personalization_service.get_personalized_recommendations(
+                user_id=device_id,
+                limit=1,
+                language=joke_request.language,
+                exclude_seen=True
+            )
+            
+            if result.jokes:
+                joke_obj, score, strategy = result.jokes[0]
+                
+                # Convert to response format and add personalization metadata
+                joke_response = JokeResponse(
+                    id=joke_obj.id,
+                    text=joke_obj.text,
+                    language=joke_obj.language,
+                    created_at=joke_obj.created_at or datetime.now(),
+                    creator="system"
+                )
+                
+                # Add personalization metadata to response
+                joke_response.recommendation_score = score
+                joke_response.strategy = strategy
+                joke_response.personalized = True
+                
+                return joke_response
+                
+        except Exception as e:
+            # Log error but continue with fallback
+            import logging
+            logging.warning(f"Personalization failed for user {device_id}: {str(e)}")
+    
+    # Fallback to original random selection
     # Get seen jokes for this device
     seen_jokes = seen_jokes_db.get(device_id, set())
     
@@ -65,17 +122,24 @@ async def get_next_joke(
         seen_jokes_db[device_id] = set()
     seen_jokes_db[device_id].add(joke["id"])
     
-    return JokeResponse(**joke)
+    # Create response with fallback indicators
+    joke_response = JokeResponse(**joke)
+    joke_response.personalized = False
+    joke_response.strategy = "random"
+    
+    return joke_response
 
 @router.post("/feedback", response_model=FeedbackResponse)
 @feedback_limit
 async def submit_feedback(
     request: Request,
     feedback: FeedbackRequest,
-    device: DeviceInfo = Depends(get_current_device)
+    update_preferences: bool = Query(default=True, description="Update user preferences based on feedback"),
+    device: DeviceInfo = Depends(get_current_device),
+    personalization_service: PersonalizationService = Depends(get_personalization_service)
 ):
     """
-    Submit feedback for a joke.
+    Submit feedback for a joke and optionally update user preferences.
     """
     device_id = device["device_id"]
     
@@ -87,7 +151,7 @@ async def submit_feedback(
             detail="Joke not found"
         )
     
-    # Store feedback
+    # Store feedback in memory (legacy)
     if device_id not in feedback_db:
         feedback_db[device_id] = {}
     
@@ -96,9 +160,39 @@ async def submit_feedback(
         "timestamp": datetime.now()
     }
     
+    # Update personalization preferences if enabled
+    tags_updated = 0
+    if update_preferences:
+        try:
+            # Map sentiment to interaction type
+            interaction_type_map = {
+                "like": "like",
+                "dislike": "skip", 
+                "neutral": "view"
+            }
+            
+            interaction_type = interaction_type_map.get(feedback.sentiment, "view")
+            
+            result = await personalization_service.update_user_preferences(
+                user_id=device_id,
+                joke_id=str(feedback.joke_id),
+                interaction_type=interaction_type
+            )
+            
+            tags_updated = result.get("tags_updated", 0)
+            
+        except Exception as e:
+            # Log error but don't fail the feedback submission
+            import logging
+            logging.warning(f"Failed to update preferences for user {device_id}: {str(e)}")
+    
+    response_message = f"Feedback recorded for joke {feedback.joke_id}"
+    if tags_updated > 0:
+        response_message += f" and {tags_updated} preference tags updated"
+    
     return FeedbackResponse(
         success=True,
-        message=f"Feedback recorded for joke {feedback.joke_id}"
+        message=response_message
     )
 
 @router.get("/history", response_model=HistoryResponse)

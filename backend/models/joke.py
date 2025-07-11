@@ -12,6 +12,10 @@ class JokeResponse(BaseModel):
     language: str
     created_at: datetime
     creator: Optional[str] = None
+    # Personalization fields
+    personalized: Optional[bool] = Field(default=None, description="Whether this joke was personalized")
+    recommendation_score: Optional[float] = Field(default=None, description="Recommendation confidence score")
+    strategy: Optional[str] = Field(default=None, description="Recommendation strategy used")
 
 class FeedbackRequest(BaseModel):
     joke_id: int = Field(..., description="ID of the joke")

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, Index, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, Index, CheckConstraint, UniqueConstraint, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -6,8 +6,76 @@ from datetime import datetime
 from typing import Optional, List
 import uuid
 import re
+import enum
 
 Base = declarative_base()
+
+
+# Tag Taxonomy Enums
+class TagStyle(enum.Enum):
+    """Style tags for joke classification"""
+    OBSERVATIONAL = "observational"
+    ABSURD = "absurd"
+    WORDPLAY = "wordplay"
+    SARCASTIC = "sarcastic"
+    PHYSICAL = "physical"
+    STORYTELLING = "storytelling"
+    ONE_LINER = "one_liner"
+    PROP_COMEDY = "prop_comedy"
+    IMPRESSIONS = "impressions"
+    SELF_DEPRECATING = "self_deprecating"
+
+
+class TagFormat(enum.Enum):
+    """Format tags for joke structure"""
+    QUESTION_ANSWER = "question_answer"
+    SETUP_PUNCHLINE = "setup_punchline"
+    LIST = "list"
+    DIALOGUE = "dialogue"
+    NARRATIVE = "narrative"
+    RIDDLE = "riddle"
+    KNOCK_KNOCK = "knock_knock"
+    MEME = "meme"
+    QUOTE = "quote"
+    COMPARISON = "comparison"
+
+
+class TagTopic(enum.Enum):
+    """Topic tags for joke content"""
+    RELATIONSHIPS = "relationships"
+    WORK = "work"
+    TECHNOLOGY = "technology"
+    FOOD = "food"
+    ANIMALS = "animals"
+    TRAVEL = "travel"
+    FAMILY = "family"
+    SPORTS = "sports"
+    POLITICS = "politics"
+    SCIENCE = "science"
+    CELEBRITIES = "celebrities"
+    MOVIES_TV = "movies_tv"
+    MUSIC = "music"
+    HEALTH = "health"
+    MONEY = "money"
+    SCHOOL = "school"
+    WEATHER = "weather"
+    HOLIDAYS = "holidays"
+    AGING = "aging"
+    PARENTING = "parenting"
+
+
+class TagTone(enum.Enum):
+    """Tone tags for joke mood"""
+    LIGHTHEARTED = "lighthearted"
+    WITTY = "witty"
+    SILLY = "silly"
+    CLEVER = "clever"
+    DARK = "dark"
+    WHOLESOME = "wholesome"
+    EDGY = "edgy"
+    NOSTALGIC = "nostalgic"
+    OPTIMISTIC = "optimistic"
+    CYNICAL = "cynical"
 
 
 class User(Base):
@@ -30,6 +98,7 @@ class User(Base):
     favorites = relationship('Favorite', back_populates='user', cascade='all, delete-orphan')
     joke_interactions = relationship('JokeInteraction', back_populates='user', cascade='all, delete-orphan')
     user_stats = relationship('UserStats', back_populates='user', uselist=False, cascade='all, delete-orphan')
+    tag_scores = relationship('UserTagScore', back_populates='user', cascade='all, delete-orphan')
 
     @validates('email')
     def validate_email(self, key, email):
@@ -77,6 +146,7 @@ class Joke(Base):
     # Relationships
     favorites = relationship('Favorite', back_populates='joke', cascade='all, delete-orphan')
     interactions = relationship('JokeInteraction', back_populates='joke', cascade='all, delete-orphan')
+    joke_tags = relationship('JokeTag', back_populates='joke', cascade='all, delete-orphan')
 
     @validates('rating')
     def validate_rating(self, key, rating):
@@ -312,3 +382,134 @@ def get_user_favorite_categories(session, user_id: str, limit: int = 3) -> List[
     ).limit(limit).all()
     
     return result
+
+
+class Tag(Base):
+    """Tag model for joke classification"""
+    __tablename__ = 'tags'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(50), unique=True, nullable=False, index=True)
+    category = Column(String(20), nullable=False, index=True)  # style, format, topic, tone
+    value = Column(String(50), nullable=False)  # The enum value
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    joke_tags = relationship('JokeTag', back_populates='tag', cascade='all, delete-orphan')
+
+    @validates('category')
+    def validate_category(self, key, category):
+        """Validate tag category"""
+        valid_categories = ['style', 'format', 'topic', 'tone']
+        if category not in valid_categories:
+            raise ValueError(f'Invalid tag category. Must be one of: {valid_categories}')
+        return category
+
+    __table_args__ = (
+        Index('idx_tag_category_value', 'category', 'value'),
+        CheckConstraint("category IN ('style', 'format', 'topic', 'tone')", name='check_tag_category'),
+    )
+
+    def __repr__(self):
+        return f"<Tag(name={self.name}, category={self.category})>"
+
+
+class JokeTag(Base):
+    """Association table for jokes and their tags with confidence scores"""
+    __tablename__ = 'joke_tags'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    joke_id = Column(String(36), ForeignKey('jokes.id'), nullable=False)
+    tag_id = Column(String(36), ForeignKey('tags.id'), nullable=False)
+    confidence = Column(Float, default=1.0)  # Confidence score for the tag assignment
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    joke = relationship('Joke', back_populates='joke_tags')
+    tag = relationship('Tag', back_populates='joke_tags')
+
+    @validates('confidence')
+    def validate_confidence(self, key, confidence):
+        """Validate confidence score"""
+        if confidence < 0 or confidence > 1:
+            raise ValueError('Confidence must be between 0 and 1')
+        return confidence
+
+    __table_args__ = (
+        Index('idx_joke_tag_unique', 'joke_id', 'tag_id', unique=True),
+        Index('idx_joke_tags_joke', 'joke_id'),
+        Index('idx_joke_tags_tag', 'tag_id'),
+        CheckConstraint('confidence >= 0 AND confidence <= 1', name='check_confidence_bounds'),
+    )
+
+    def __repr__(self):
+        return f"<JokeTag(joke_id={self.joke_id}, tag_id={self.tag_id}, confidence={self.confidence})>"
+
+
+class UserTagScore(Base):
+    """Track user preferences for different tags based on interactions"""
+    __tablename__ = 'user_tag_scores'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey('users.id'), nullable=False)
+    tag_id = Column(String(36), ForeignKey('tags.id'), nullable=False)
+    score = Column(Float, default=0.0)  # Preference score (-1 to 1)
+    interaction_count = Column(Integer, default=0)  # Number of interactions that contributed to this score
+    last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    user = relationship('User', back_populates='tag_scores')
+    tag = relationship('Tag')
+
+    @validates('score')
+    def validate_score(self, key, score):
+        """Validate score range"""
+        if score < -1 or score > 1:
+            raise ValueError('Score must be between -1 and 1')
+        return score
+
+    __table_args__ = (
+        Index('idx_user_tag_score_unique', 'user_id', 'tag_id', unique=True),
+        Index('idx_user_tag_scores_user', 'user_id'),
+        Index('idx_user_tag_scores_tag', 'tag_id'),
+        Index('idx_user_tag_scores_score', 'score'),
+        CheckConstraint('score >= -1 AND score <= 1', name='check_score_bounds'),
+        CheckConstraint('interaction_count >= 0', name='check_interaction_count_positive'),
+    )
+
+    def __repr__(self):
+        return f"<UserTagScore(user_id={self.user_id}, tag_id={self.tag_id}, score={self.score})>"
+
+
+class PersonalizationMetric(Base):
+    """Track personalization algorithm performance metrics"""
+    __tablename__ = 'personalization_metrics'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey('users.id'), nullable=False)
+    metric_type = Column(String(50), nullable=False)  # 'click_through_rate', 'avg_rating', 'exploration_rate'
+    value = Column(Float, nullable=False)
+    period_start = Column(DateTime(timezone=True), nullable=False)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship('User')
+
+    @validates('metric_type')
+    def validate_metric_type(self, key, metric_type):
+        """Validate metric type"""
+        valid_types = ['click_through_rate', 'avg_rating', 'exploration_rate', 'diversity_score']
+        if metric_type not in valid_types:
+            raise ValueError(f'Invalid metric type. Must be one of: {valid_types}')
+        return metric_type
+
+    __table_args__ = (
+        Index('idx_personalization_metrics_user_type', 'user_id', 'metric_type'),
+        Index('idx_personalization_metrics_period', 'period_start', 'period_end'),
+        CheckConstraint("metric_type IN ('click_through_rate', 'avg_rating', 'exploration_rate', 'diversity_score')", name='check_metric_type'),
+    )
+
+    def __repr__(self):
+        return f"<PersonalizationMetric(user_id={self.user_id}, type={self.metric_type}, value={self.value})>"
