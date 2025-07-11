@@ -6,6 +6,7 @@
   "navigation": {
     "home": "Inicio",
     "favorites": "Favoritos",
+    "history": "Historial",
     "settings": "Configuración",
     "about": "Acerca de"
   },
@@ -35,9 +36,60 @@
     "title": "Chistes Favoritos",
     "empty": "No hay chistes favoritos aún",
     "emptyHint": "Desliza a la derecha en los chistes para guardarlos aquí",
+    "emptyFiltered": "Ningún chiste coincide con tus filtros actuales. Intenta ajustar tu búsqueda.",
     "remove": "Eliminar",
     "share": "Compartir",
-    "copied": "Copiado al portapapeles"
+    "copied": "Copiado al portapapeles",
+    "addToFavorites": "Agregar a favoritos",
+    "removeFromFavorites": "Quitar de favoritos",
+    "addedToFavorites": "Agregado a favoritos",
+    "removedFromFavorites": "Quitado de favoritos",
+    "search": "Buscar favoritos...",
+    "clearSearch": "Limpiar búsqueda",
+    "clearFilters": "Limpiar Filtros",
+    "selectMode": "Seleccionar",
+    "cancelSelect": "Cancelar",
+    "selectAll": "Seleccionar Todo",
+    "clearSelection": "Limpiar",
+    "shareSelected": "Compartir",
+    "removeSelected": "Eliminar",
+    "selectedCount": "{{count}} seleccionado",
+    "removeConfirm": "¿Eliminar {{count}} chiste de favoritos?",
+    "removeConfirmPlural": "¿Eliminar {{count}} chistes de favoritos?",
+    "bulkRemoveSuccess": "{{count}} chistes eliminados de favoritos",
+    "filters": {
+      "allLanguages": "Todos los Idiomas",
+      "allTopics": "Todos los Temas",
+      "allStyles": "Todos los Estilos",
+      "language": "Idioma: {{language}}",
+      "topic": "Tema: {{topic}}",
+      "style": "Estilo: {{style}}"
+    }
+  },
+  "history": {
+    "title": "Historial de Chistes",
+    "empty": "No hay chistes en el historial",
+    "emptyHint": "¡Comienza a ver chistes para construir tu historial!",
+    "emptyFiltered": "Ningún chiste coincide con tus filtros actuales. Intenta ajustar tu búsqueda.",
+    "search": "Buscar chistes...",
+    "clearSearch": "Limpiar búsqueda",
+    "clearFilters": "Limpiar Filtros",
+    "loadingHistory": "Cargando historial...",
+    "errorLoading": "Error al cargar el historial de chistes. Inténtalo de nuevo.",
+    "filters": {
+      "allLanguages": "Todos los Idiomas",
+      "allReactions": "Todas las Reacciones",
+      "liked": "👍 Me gustó",
+      "disliked": "👎 No me gustó",
+      "neutral": "➖ Neutral",
+      "language": "Filtro de idioma: {{language}}",
+      "sentiment": "Filtro de reacción: {{sentiment}}"
+    },
+    "reactions": {
+      "like": "👍",
+      "dislike": "👎",
+      "neutral": "➖"
+    }
   },
   "categories": {
     "all": "Todos",
@@ -60,7 +112,25 @@
     "like": "Me gusta",
     "share": "Compartir",
     "copyText": "Copiar Texto",
-    "tryAgain": "Intentar de Nuevo"
+    "tryAgain": "Intentar de Nuevo",
+    "favorite": "Favorito",
+    "unfavorite": "Quitar favorito",
+    "goBack": "Volver",
+    "loading": "Cargando...",
+    "refresh": "Actualizar",
+    "loadMore": "Cargar más"
+  },
+  "sharing": {
+    "title": "Compartir este chiste",
+    "shareJoke": "Compartir chiste",
+    "copyToClipboard": "Copiar al portapapeles",
+    "shareMultiple": "Compartir {{count}} chistes",
+    "copiedToClipboard": "Chiste copiado al portapapeles",
+    "sharingNotAvailable": "Compartir no disponible",
+    "sharingError": "No se pudo compartir el chiste. Inténtalo de nuevo.",
+    "clipboardError": "No se pudo copiar el chiste al portapapeles",
+    "shareText": "Aquí tienes algunos chistes geniales:",
+    "sharedFrom": "Compartido desde {{appName}}"
   },
   "stats": {
     "jokesViewed": "Chistes Vistos",

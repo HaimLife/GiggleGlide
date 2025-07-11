@@ -6,6 +6,7 @@
   "navigation": {
     "home": "Home",
     "favorites": "Favorites",
+    "history": "History",
     "settings": "Settings",
     "about": "About"
   },
@@ -35,9 +36,60 @@
     "title": "Favorite Jokes",
     "empty": "No favorite jokes yet",
     "emptyHint": "Swipe right on jokes to save them here",
+    "emptyFiltered": "No jokes match your current filters. Try adjusting your search.",
     "remove": "Remove",
     "share": "Share",
-    "copied": "Copied to clipboard"
+    "copied": "Copied to clipboard",
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "addedToFavorites": "Added to favorites",
+    "removedFromFavorites": "Removed from favorites",
+    "search": "Search favorites...",
+    "clearSearch": "Clear search",
+    "clearFilters": "Clear Filters",
+    "selectMode": "Select",
+    "cancelSelect": "Cancel",
+    "selectAll": "Select All",
+    "clearSelection": "Clear",
+    "shareSelected": "Share",
+    "removeSelected": "Remove",
+    "selectedCount": "{{count}} selected",
+    "removeConfirm": "Remove {{count}} joke from favorites?",
+    "removeConfirmPlural": "Remove {{count}} jokes from favorites?",
+    "bulkRemoveSuccess": "Removed {{count}} jokes from favorites",
+    "filters": {
+      "allLanguages": "All Languages",
+      "allTopics": "All Topics",
+      "allStyles": "All Styles",
+      "language": "Language: {{language}}",
+      "topic": "Topic: {{topic}}",
+      "style": "Style: {{style}}"
+    }
+  },
+  "history": {
+    "title": "Joke History",
+    "empty": "No jokes in history",
+    "emptyHint": "Start viewing jokes to build your history!",
+    "emptyFiltered": "No jokes match your current filters. Try adjusting your search.",
+    "search": "Search jokes...",
+    "clearSearch": "Clear search",
+    "clearFilters": "Clear Filters",
+    "loadingHistory": "Loading history...",
+    "errorLoading": "Failed to load joke history. Please try again.",
+    "filters": {
+      "allLanguages": "All Languages",
+      "allReactions": "All Reactions",
+      "liked": "👍 Liked",
+      "disliked": "👎 Disliked",
+      "neutral": "➖ Neutral",
+      "language": "Language filter: {{language}}",
+      "sentiment": "Sentiment filter: {{sentiment}}"
+    },
+    "reactions": {
+      "like": "👍",
+      "dislike": "👎",
+      "neutral": "➖"
+    }
   },
   "categories": {
     "all": "All",
@@ -60,7 +112,25 @@
     "like": "Like",
     "share": "Share",
     "copyText": "Copy Text",
-    "tryAgain": "Try Again"
+    "tryAgain": "Try Again",
+    "favorite": "Favorite",
+    "unfavorite": "Unfavorite",
+    "goBack": "Go back",
+    "loading": "Loading...",
+    "refresh": "Refresh",
+    "loadMore": "Load more"
+  },
+  "sharing": {
+    "title": "Share this joke",
+    "shareJoke": "Share joke",
+    "copyToClipboard": "Copy to clipboard",
+    "shareMultiple": "Share {{count}} jokes",
+    "copiedToClipboard": "Joke copied to clipboard",
+    "sharingNotAvailable": "Sharing not available",
+    "sharingError": "Unable to share joke. Please try again.",
+    "clipboardError": "Unable to copy joke to clipboard",
+    "shareText": "Here are some great jokes:",
+    "sharedFrom": "Shared from {{appName}}"
   },
   "stats": {
     "jokesViewed": "Jokes Viewed",

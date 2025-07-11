@@ -3,5 +3,6 @@ export type RootStackParamList = {
   Details: undefined;
   Settings: undefined;
   Favorites: undefined;
+  History: undefined;
   Onboarding: undefined;
 };

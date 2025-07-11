@@ -1,6 +1,6 @@
 import { BaseRepository } from './BaseRepository';
 import { TABLES } from '../config';
-import { UserJokeFeedback, PaginationOptions } from '../types';
+import { UserJokeFeedback, PaginationOptions, JokeWithFeedback, Joke } from '../types';
 
 export class FeedbackRepository extends BaseRepository {
   constructor() {
@@ -230,5 +230,111 @@ export class FeedbackRepository extends BaseRepository {
     );
     
     return result.changes;
+  }
+
+  /**
+   * Get jokes with feedback data for a user (for history)
+   */
+  async getJokesWithFeedback(userId: string, options: PaginationOptions = {}): Promise<JokeWithFeedback[]> {
+    const { offset = 0, limit = 20 } = options;
+    
+    return await this.query<JokeWithFeedback>(
+      `SELECT 
+         j.*,
+         f.sentiment as user_sentiment,
+         EXISTS(SELECT 1 FROM ${TABLES.FAVORITES} fav WHERE fav.user_id = ? AND fav.joke_id = j.id) as is_favorite,
+         f.ts as viewed_at
+       FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND j.is_flagged = 0
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, userId, limit, offset]
+    );
+  }
+
+  /**
+   * Search jokes with feedback data for a user
+   */
+  async searchJokesWithFeedback(
+    userId: string, 
+    searchQuery: string, 
+    options: PaginationOptions = {}
+  ): Promise<JokeWithFeedback[]> {
+    const { offset = 0, limit = 20 } = options;
+    const searchPattern = `%${searchQuery.toLowerCase()}%`;
+    
+    return await this.query<JokeWithFeedback>(
+      `SELECT 
+         j.*,
+         f.sentiment as user_sentiment,
+         EXISTS(SELECT 1 FROM ${TABLES.FAVORITES} fav WHERE fav.user_id = ? AND fav.joke_id = j.id) as is_favorite,
+         f.ts as viewed_at
+       FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND j.is_flagged = 0
+         AND (LOWER(j.txt) LIKE ? OR LOWER(j.topic) LIKE ? OR LOWER(j.style) LIKE ? OR LOWER(j.tone) LIKE ?)
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, userId, searchPattern, searchPattern, searchPattern, searchPattern, limit, offset]
+    );
+  }
+
+  /**
+   * Get jokes with feedback filtered by sentiment
+   */
+  async getJokesWithFeedbackBySentiment(
+    userId: string, 
+    sentiment: 'like' | 'neutral' | 'dislike',
+    options: PaginationOptions = {}
+  ): Promise<JokeWithFeedback[]> {
+    const { offset = 0, limit = 20 } = options;
+    
+    return await this.query<JokeWithFeedback>(
+      `SELECT 
+         j.*,
+         f.sentiment as user_sentiment,
+         EXISTS(SELECT 1 FROM ${TABLES.FAVORITES} fav WHERE fav.user_id = ? AND fav.joke_id = j.id) as is_favorite,
+         f.ts as viewed_at
+       FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND f.sentiment = ? AND j.is_flagged = 0
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, userId, sentiment, limit, offset]
+    );
+  }
+
+  /**
+   * Get count of viewed jokes for a user
+   */
+  async getViewedJokesCount(userId: string): Promise<number> {
+    const result = await this.queryFirst<{ count: number }>(
+      `SELECT COUNT(DISTINCT joke_id) as count 
+       FROM ${this.tableName} 
+       WHERE user_id = ?`,
+      [userId]
+    );
+    
+    return result?.count || 0;
+  }
+
+  /**
+   * Get recently viewed jokes (for quick access)
+   */
+  async getRecentlyViewed(userId: string, limit: number = 5): Promise<JokeWithFeedback[]> {
+    return await this.query<JokeWithFeedback>(
+      `SELECT 
+         j.*,
+         f.sentiment as user_sentiment,
+         EXISTS(SELECT 1 FROM ${TABLES.FAVORITES} fav WHERE fav.user_id = ? AND fav.joke_id = j.id) as is_favorite,
+         f.ts as viewed_at
+       FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND j.is_flagged = 0
+       ORDER BY f.ts DESC 
+       LIMIT ?`,
+      [userId, userId, limit]
+    );
   }
 }

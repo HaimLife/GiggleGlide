@@ -83,6 +83,140 @@ export class FavoritesRepository extends BaseRepository {
   }
 
   /**
+   * Search favorite jokes for a user
+   */
+  async searchFavoriteJokes(
+    userId: string, 
+    searchQuery: string, 
+    options: PaginationOptions = {}
+  ): Promise<Joke[]> {
+    const { offset = 0, limit = 20 } = options;
+    const searchPattern = `%${searchQuery.toLowerCase()}%`;
+    
+    return await this.query<Joke>(
+      `SELECT j.* FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND j.is_flagged = 0
+         AND (LOWER(j.txt) LIKE ? OR LOWER(j.topic) LIKE ? OR LOWER(j.style) LIKE ? OR LOWER(j.tone) LIKE ?)
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, searchPattern, searchPattern, searchPattern, searchPattern, limit, offset]
+    );
+  }
+
+  /**
+   * Get favorite jokes filtered by language
+   */
+  async findJokesByUserAndLanguage(
+    userId: string, 
+    language: string,
+    options: PaginationOptions = {}
+  ): Promise<Joke[]> {
+    const { offset = 0, limit = 20 } = options;
+    
+    return await this.query<Joke>(
+      `SELECT j.* FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND j.lang = ? AND j.is_flagged = 0
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, language, limit, offset]
+    );
+  }
+
+  /**
+   * Get favorite jokes filtered by topic
+   */
+  async findJokesByUserAndTopic(
+    userId: string, 
+    topic: string,
+    options: PaginationOptions = {}
+  ): Promise<Joke[]> {
+    const { offset = 0, limit = 20 } = options;
+    
+    return await this.query<Joke>(
+      `SELECT j.* FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND j.topic = ? AND j.is_flagged = 0
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, topic, limit, offset]
+    );
+  }
+
+  /**
+   * Get favorite jokes filtered by style
+   */
+  async findJokesByUserAndStyle(
+    userId: string, 
+    style: string,
+    options: PaginationOptions = {}
+  ): Promise<Joke[]> {
+    const { offset = 0, limit = 20 } = options;
+    
+    return await this.query<Joke>(
+      `SELECT j.* FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE f.user_id = ? AND j.style = ? AND j.is_flagged = 0
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, style, limit, offset]
+    );
+  }
+
+  /**
+   * Get favorite jokes with multiple filters
+   */
+  async findJokesWithFilters(
+    userId: string,
+    filters: {
+      language?: string;
+      topic?: string;
+      style?: string;
+      searchQuery?: string;
+    },
+    options: PaginationOptions = {}
+  ): Promise<Joke[]> {
+    const { offset = 0, limit = 20 } = options;
+    const { language, topic, style, searchQuery } = filters;
+    
+    let whereClause = 'f.user_id = ? AND j.is_flagged = 0';
+    const params: any[] = [userId];
+    
+    if (language) {
+      whereClause += ' AND j.lang = ?';
+      params.push(language);
+    }
+    
+    if (topic) {
+      whereClause += ' AND j.topic = ?';
+      params.push(topic);
+    }
+    
+    if (style) {
+      whereClause += ' AND j.style = ?';
+      params.push(style);
+    }
+    
+    if (searchQuery) {
+      const searchPattern = `%${searchQuery.toLowerCase()}%`;
+      whereClause += ' AND (LOWER(j.txt) LIKE ? OR LOWER(j.topic) LIKE ? OR LOWER(j.style) LIKE ? OR LOWER(j.tone) LIKE ?)';
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+    }
+    
+    params.push(limit, offset);
+    
+    return await this.query<Joke>(
+      `SELECT j.* FROM ${TABLES.JOKES} j
+       INNER JOIN ${this.tableName} f ON j.id = f.joke_id
+       WHERE ${whereClause}
+       ORDER BY f.ts DESC 
+       LIMIT ? OFFSET ?`,
+      params
+    );
+  }
+
+  /**
    * Get favorite count for a joke
    */
   async getJokeFavoriteCount(jokeId: number): Promise<number> {

@@ -205,9 +205,9 @@ export class JokeFormatter {
   }
 
   /**
-   * Format joke for different contexts (card, list, full view)
+   * Format joke for different contexts (card, list, full view, share)
    */
-  static formatForContext(joke: Joke, context: 'card' | 'list' | 'full'): string {
+  static formatForContext(joke: Joke, context: 'card' | 'list' | 'full' | 'share'): string {
     const formatted = this.formatJokeText(joke);
     
     switch (context) {
@@ -222,6 +222,13 @@ export class JokeFormatter {
       case 'card':
         // Optimize for card display
         return formatted;
+        
+      case 'share':
+        // Optimized for sharing - clean formatting without markup
+        return formatted
+          .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markup
+          .replace(/\*(.*?)\*/g, '$1')     // Remove italic markup
+          .trim();
         
       case 'full':
         // Full formatting with metadata

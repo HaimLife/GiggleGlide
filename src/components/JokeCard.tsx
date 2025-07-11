@@ -47,6 +47,7 @@ const AnimatedView = ReAnimated.createAnimatedComponent(View);
 
 import { Joke } from '../services/database/types';
 import { JokeFormatter } from '../utils/jokeFormatting';
+import { SharingService } from '../services/SharingService';
 
 interface JokeCardProps {
   joke: Joke & {
@@ -61,6 +62,11 @@ interface JokeCardProps {
   error?: string | null;
   showHints?: boolean;
   reducedMotion?: boolean;
+  isFavorite?: boolean;
+  onFavoriteToggle?: (id: string, isFavorite: boolean) => void;
+  onShare?: (id: string) => void;
+  showFavoriteButton?: boolean;
+  showShareButton?: boolean;
 }
 
 // Error boundary component for card-level error handling
@@ -103,6 +109,11 @@ const JokeCard: React.FC<JokeCardProps> = ({
   error = null,
   showHints = false,
   reducedMotion = false,
+  isFavorite = false,
+  onFavoriteToggle,
+  onShare,
+  showFavoriteButton = true,
+  showShareButton = true,
 }) => {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -149,6 +160,26 @@ const JokeCard: React.FC<JokeCardProps> = ({
     }
   };
 
+  const handleFavoriteToggle = () => {
+    if (onFavoriteToggle) {
+      triggerHaptic('Light');
+      onFavoriteToggle(joke.id, !isFavorite);
+    }
+  };
+
+  const handleShare = async () => {
+    if (onShare) {
+      triggerHaptic('Light');
+      onShare(joke.id);
+    } else {
+      // Default sharing behavior using SharingService
+      await SharingService.shareJokeOptimized(joke, {
+        includeMetadata: true,
+        includeAppName: true,
+      });
+    }
+  };
+
   const announceAction = (action: string) => {
     if (isScreenReaderEnabled) {
       AccessibilityInfo.announceForAccessibility(`${action} joke: ${joke.txt.substring(0, 50)}...`);
@@ -176,6 +207,17 @@ const JokeCard: React.FC<JokeCardProps> = ({
           announceAction('Refreshing');
           onPullToRefresh();
         }
+        break;
+      case 'favorite':
+        if (onFavoriteToggle) {
+          const action = isFavorite ? 'Removed from favorites' : 'Added to favorites';
+          announceAction(action);
+          handleFavoriteToggle();
+        }
+        break;
+      case 'share':
+        announceAction('Sharing');
+        handleShare();
         break;
     }
   };
@@ -515,6 +557,11 @@ const JokeCard: React.FC<JokeCardProps> = ({
             { name: 'dislike', label: 'Dislike this joke' },
             ...(onSwipeUp ? [{ name: 'neutral', label: 'Mark as neutral' }] : []),
             ...(onPullToRefresh ? [{ name: 'refresh', label: 'Get new joke' }] : []),
+            ...(showFavoriteButton && onFavoriteToggle ? [{ 
+              name: 'favorite', 
+              label: isFavorite ? 'Remove from favorites' : 'Add to favorites' 
+            }] : []),
+            ...(showShareButton ? [{ name: 'share', label: 'Share this joke' }] : []),
           ] : []}
           onAccessibilityAction={(event: any) => {
             handleAccessibilityAction(event.nativeEvent.actionName);
@@ -610,6 +657,41 @@ const JokeCard: React.FC<JokeCardProps> = ({
                 {onPullToRefresh && <Text style={styles.hintText}>↓ New joke</Text>}
               </View>
             )}
+
+            {/* Action buttons */}
+            {isActive && !isScreenReaderEnabled && (showFavoriteButton || showShareButton) && (
+              <View style={styles.actionButtonsContainer}>
+                {showFavoriteButton && onFavoriteToggle && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.favoriteButton]}
+                    onPress={handleFavoriteToggle}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                    accessibilityHint={isFavorite ? 'Removes this joke from your favorites' : 'Adds this joke to your favorites'}
+                    testID="favorite-button"
+                  >
+                    <Text style={styles.actionButtonText}>
+                      {isFavorite ? '★' : '☆'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                {showShareButton && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.shareButton]}
+                    onPress={handleShare}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share this joke"
+                    accessibilityHint="Opens sharing options for this joke"
+                    testID="share-button"
+                  >
+                    <Text style={styles.actionButtonText}>🔗</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </LinearGradient>
         </AnimatedView>
       </PanGestureHandler>
@@ -662,6 +744,34 @@ const JokeCard: React.FC<JokeCardProps> = ({
               accessibilityHint="Loads a completely new joke"
             >
               <Text style={styles.accessibilityButtonText}>🔄 New Joke</Text>
+            </TouchableOpacity>
+          )}
+          
+          {showFavoriteButton && onFavoriteToggle && (
+            <TouchableOpacity
+              style={[styles.accessibilityButton, styles.favoriteAccessibilityButton]}
+              onPress={() => handleAccessibilityAction('favorite')}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              accessibilityHint={isFavorite ? 'Removes this joke from your favorites' : 'Adds this joke to your favorites'}
+            >
+              <Text style={styles.accessibilityButtonText}>
+                {isFavorite ? '★ Remove' : '☆ Favorite'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {showShareButton && (
+            <TouchableOpacity
+              style={[styles.accessibilityButton, styles.shareAccessibilityButton]}
+              onPress={() => handleAccessibilityAction('share')}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Share this joke"
+              accessibilityHint="Opens sharing options for this joke"
+            >
+              <Text style={styles.accessibilityButtonText}>🔗 Share</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -921,10 +1031,54 @@ const styles = StyleSheet.create({
   refreshButton: {
     backgroundColor: '#2196F3',
   },
+  favoriteAccessibilityButton: {
+    backgroundColor: '#FF9800',
+  },
+  shareAccessibilityButton: {
+    backgroundColor: '#607D8B',
+  },
   accessibilityButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Action buttons (non-accessibility)
+  actionButtonsContainer: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  favoriteButton: {
+    backgroundColor: 'rgba(255, 152, 0, 0.9)',
+  },
+  shareButton: {
+    backgroundColor: 'rgba(96, 125, 139, 0.9)',
+  },
+  actionButtonText: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 
