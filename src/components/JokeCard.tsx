@@ -24,15 +24,23 @@ import ReAnimated, {
   runOnJS,
   interpolate,
   Extrapolate,
+  interpolateColor,
+  withSequence,
+  withDelay,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const SWIPE_THRESHOLD = screenWidth * 0.25;
 const SWIPE_OUT_DURATION = 250;
 const SWIPE_VELOCITY_THRESHOLD = 800;
 const VERTICAL_SWIPE_THRESHOLD = screenHeight * 0.2;
+const ROTATION_MULTIPLIER = 0.03;
+const HAPTIC_THRESHOLD = screenWidth * 0.1;
 
-const AnimatedView = ReAnimated.createAnimatedComponent(View);
+const AnimatedView = ReAnimated.default?.createAnimatedComponent ? 
+  ReAnimated.default.createAnimatedComponent(View) : 
+  ReAnimated.createAnimatedComponent ? ReAnimated.createAnimatedComponent(View) : View;
 
 interface JokeCardProps {
   joke: {
@@ -88,6 +96,12 @@ const JokeCard: React.FC<JokeCardProps> = ({
 }) => {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const hasTriggeredHaptic = useSharedValue(false);
+
+  const triggerHaptic = (intensity: 'Light' | 'Medium' | 'Heavy' = 'Light') => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle[intensity]);
+  };
 
   const handleSwipeLeft = () => {
     'worklet';
@@ -118,6 +132,25 @@ const JokeCard: React.FC<JokeCardProps> = ({
       if (!isActive) return;
       translateX.value = ctx.startX + event.translationX;
       translateY.value = ctx.startY + event.translationY;
+      
+      // Trigger haptic feedback when crossing threshold
+      const absX = Math.abs(translateX.value);
+      const absY = Math.abs(translateY.value);
+      
+      if (!hasTriggeredHaptic.value && 
+          (absX > HAPTIC_THRESHOLD || (absY > HAPTIC_THRESHOLD && translateY.value < 0))) {
+        hasTriggeredHaptic.value = true;
+        runOnJS(triggerHaptic)('Light');
+      }
+      
+      // Scale animation based on distance
+      const distance = Math.sqrt(translateX.value ** 2 + translateY.value ** 2);
+      scale.value = interpolate(
+        distance,
+        [0, screenWidth / 2],
+        [1, 0.9],
+        Extrapolate.CLAMP
+      );
     },
     onEnd: (event) => {
       if (!isActive) return;
@@ -133,10 +166,12 @@ const JokeCard: React.FC<JokeCardProps> = ({
         translationY < -VERTICAL_SWIPE_THRESHOLD &&
         velocityY < -SWIPE_VELOCITY_THRESHOLD
       ) {
+        runOnJS(triggerHaptic)('Medium');
         translateY.value = withTiming(-screenHeight, { duration: SWIPE_OUT_DURATION }, () => {
           handleSwipeUp();
           translateX.value = 0;
           translateY.value = 0;
+          hasTriggeredHaptic.value = false;
         });
         return;
       }
@@ -146,10 +181,12 @@ const JokeCard: React.FC<JokeCardProps> = ({
         translationX > SWIPE_THRESHOLD ||
         (translationX > screenWidth * 0.1 && velocityX > SWIPE_VELOCITY_THRESHOLD)
       ) {
+        runOnJS(triggerHaptic)('Medium');
         translateX.value = withTiming(screenWidth + 100, { duration: SWIPE_OUT_DURATION }, () => {
           handleSwipeRight();
           translateX.value = 0;
           translateY.value = 0;
+          hasTriggeredHaptic.value = false;
         });
         return;
       }
@@ -159,38 +196,105 @@ const JokeCard: React.FC<JokeCardProps> = ({
         translationX < -SWIPE_THRESHOLD ||
         (translationX < -screenWidth * 0.1 && velocityX < -SWIPE_VELOCITY_THRESHOLD)
       ) {
+        runOnJS(triggerHaptic)('Medium');
         translateX.value = withTiming(-screenWidth - 100, { duration: SWIPE_OUT_DURATION }, () => {
           handleSwipeLeft();
           translateX.value = 0;
           translateY.value = 0;
+          hasTriggeredHaptic.value = false;
         });
         return;
       }
 
-      // Spring back to center
-      translateX.value = withSpring(0);
-      translateY.value = withSpring(0);
+      // Spring back to center with haptic feedback
+      translateX.value = withSpring(0, {
+        damping: 15,
+        stiffness: 100,
+        mass: 1,
+      });
+      translateY.value = withSpring(0, {
+        damping: 15,
+        stiffness: 100,
+        mass: 1,
+      });
+      scale.value = withSpring(1);
+      hasTriggeredHaptic.value = false;
+      runOnJS(triggerHaptic)('Light');
     },
   });
 
   const cardStyle = useAnimatedStyle(() => {
-    const rotate = interpolate(
-      translateX.value,
-      [-screenWidth / 2, 0, screenWidth / 2],
-      [-10, 0, 10],
-      Extrapolate.CLAMP
-    );
+    'worklet';
+    const rotate = translateX.value * ROTATION_MULTIPLIER;
 
     return {
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
         { rotate: `${rotate}deg` },
+        { scale: scale.value },
       ],
     };
-  });
+  }, []);
+
+  // Animated overlay style with color transitions
+  const overlayStyle = useAnimatedStyle(() => {
+    'worklet';
+    const likeProgress = interpolate(
+      translateX.value,
+      [0, SWIPE_THRESHOLD],
+      [0, 1],
+      Extrapolate.CLAMP
+    );
+    
+    const dislikeProgress = interpolate(
+      translateX.value,
+      [-SWIPE_THRESHOLD, 0],
+      [1, 0],
+      Extrapolate.CLAMP
+    );
+    
+    const neutralProgress = interpolate(
+      translateY.value,
+      [-VERTICAL_SWIPE_THRESHOLD, 0],
+      [1, 0],
+      Extrapolate.CLAMP
+    );
+
+    let backgroundColor = 'transparent';
+    let opacity = 0;
+
+    if (likeProgress > 0) {
+      backgroundColor = interpolateColor(
+        likeProgress,
+        [0, 1],
+        ['transparent', 'rgba(76, 175, 80, 0.3)']
+      );
+      opacity = likeProgress * 0.5;
+    } else if (dislikeProgress > 0) {
+      backgroundColor = interpolateColor(
+        dislikeProgress,
+        [0, 1],
+        ['transparent', 'rgba(244, 67, 54, 0.3)']
+      );
+      opacity = dislikeProgress * 0.5;
+    } else if (neutralProgress > 0 && translateY.value < 0) {
+      backgroundColor = interpolateColor(
+        neutralProgress,
+        [0, 1],
+        ['transparent', 'rgba(158, 158, 158, 0.3)']
+      );
+      opacity = neutralProgress * 0.5;
+    }
+
+    return {
+      backgroundColor,
+      opacity,
+    };
+  }, []);
 
   const likeOpacityStyle = useAnimatedStyle(() => {
+    'worklet';
     return {
       opacity: interpolate(
         translateX.value,
@@ -199,9 +303,10 @@ const JokeCard: React.FC<JokeCardProps> = ({
         Extrapolate.CLAMP
       ),
     };
-  });
+  }, []);
 
   const nopeOpacityStyle = useAnimatedStyle(() => {
+    'worklet';
     return {
       opacity: interpolate(
         translateX.value,
@@ -210,9 +315,10 @@ const JokeCard: React.FC<JokeCardProps> = ({
         Extrapolate.CLAMP
       ),
     };
-  });
+  }, []);
 
   const neutralOpacityStyle = useAnimatedStyle(() => {
+    'worklet';
     return {
       opacity: interpolate(
         translateY.value,
@@ -221,7 +327,7 @@ const JokeCard: React.FC<JokeCardProps> = ({
         Extrapolate.CLAMP
       ),
     };
-  });
+  }, []);
 
   // Loading state
   if (isLoading) {
@@ -245,8 +351,9 @@ const JokeCard: React.FC<JokeCardProps> = ({
   }
 
   return (
-    <PanGestureHandler onGestureEvent={gestureHandler} enabled={isActive}>
+    <PanGestureHandler onGestureEvent={gestureHandler} enabled={isActive} testID="pan-gesture-handler">
       <AnimatedView
+        testID="joke-card"
         style={[
           styles.card,
           cardStyle,
@@ -268,22 +375,34 @@ const JokeCard: React.FC<JokeCardProps> = ({
             {joke.text}
           </Text>
 
+          {/* Animated color overlay */}
+          <AnimatedView style={[styles.overlay, overlayStyle]} pointerEvents="none" />
+          
           <AnimatedView
             style={[styles.likeContainer, likeOpacityStyle]}
+            pointerEvents="none"
           >
-            <Text style={styles.likeText}>LIKE</Text>
+            <View style={styles.labelWrapper}>
+              <Text style={styles.likeText}>LIKE</Text>
+            </View>
           </AnimatedView>
 
           <AnimatedView
             style={[styles.nopeContainer, nopeOpacityStyle]}
+            pointerEvents="none"
           >
-            <Text style={styles.nopeText}>NOPE</Text>
+            <View style={styles.labelWrapper}>
+              <Text style={styles.nopeText}>NOPE</Text>
+            </View>
           </AnimatedView>
 
           <AnimatedView
             style={[styles.neutralContainer, neutralOpacityStyle]}
+            pointerEvents="none"
           >
-            <Text style={styles.neutralText}>NEUTRAL</Text>
+            <View style={styles.labelWrapper}>
+              <Text style={styles.neutralText}>NEUTRAL</Text>
+            </View>
           </AnimatedView>
         </LinearGradient>
       </AnimatedView>
@@ -375,14 +494,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     maxHeight: screenHeight * 0.5,
   },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+  },
+  labelWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
   likeContainer: {
     position: 'absolute',
     top: 50,
     left: 40,
-    padding: 10,
-    borderWidth: 4,
-    borderColor: '#4CAF50',
-    borderRadius: 10,
     transform: [{ rotate: '-30deg' }],
   },
   likeText: {
@@ -394,10 +530,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 40,
-    padding: 10,
-    borderWidth: 4,
-    borderColor: '#F44336',
-    borderRadius: 10,
     transform: [{ rotate: '30deg' }],
   },
   nopeText: {
@@ -409,14 +541,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     alignSelf: 'center',
-    padding: 10,
-    borderWidth: 4,
-    borderColor: '#FFC107',
-    borderRadius: 10,
   },
   neutralText: {
     fontSize: 32,
-    color: '#FFC107',
+    color: '#9E9E9E',
     fontWeight: 'bold',
   },
   inactiveCard: {
