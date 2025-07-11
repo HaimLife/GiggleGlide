@@ -1,0 +1,80 @@
+{
+  "app": {
+    "name": "GiggleGlide",
+    "tagline": "Desliza para Sonreír"
+  },
+  "navigation": {
+    "home": "Inicio",
+    "favorites": "Favoritos",
+    "settings": "Configuración",
+    "about": "Acerca de"
+  },
+  "home": {
+    "loading": "Cargando chistes...",
+    "noJokes": "No hay chistes disponibles",
+    "errorLoading": "Error al cargar chistes",
+    "retry": "Reintentar",
+    "swipeLeft": "Desliza a la izquierda para omitir",
+    "swipeRight": "Desliza a la derecha para guardar"
+  },
+  "settings": {
+    "title": "Configuración",
+    "language": "Idioma",
+    "selectLanguage": "Seleccionar Idioma",
+    "notifications": "Notificaciones",
+    "dailyJoke": "Recordatorio de Chiste Diario",
+    "darkMode": "Modo Oscuro",
+    "clearData": "Borrar Datos",
+    "clearFavorites": "Borrar Favoritos",
+    "clearConfirm": "¿Estás seguro de que quieres borrar todos los favoritos?",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "version": "Versión"
+  },
+  "favorites": {
+    "title": "Chistes Favoritos",
+    "empty": "No hay chistes favoritos aún",
+    "emptyHint": "Desliza a la derecha en los chistes para guardarlos aquí",
+    "remove": "Eliminar",
+    "share": "Compartir",
+    "copied": "Copiado al portapapeles"
+  },
+  "categories": {
+    "all": "Todos",
+    "programming": "Programación",
+    "dad": "Chistes de Papá",
+    "pun": "Juegos de Palabras",
+    "oneliners": "Frases Ingeniosas",
+    "knock-knock": "Toc Toc",
+    "animals": "Animales"
+  },
+  "errors": {
+    "general": "Algo salió mal",
+    "network": "Error de red. Por favor, verifica tu conexión.",
+    "loadFailed": "Error al cargar chistes",
+    "saveFailed": "Error al guardar el chiste",
+    "removeFailed": "Error al eliminar el chiste"
+  },
+  "actions": {
+    "skip": "Omitir",
+    "like": "Me gusta",
+    "share": "Compartir",
+    "copyText": "Copiar Texto",
+    "tryAgain": "Intentar de Nuevo"
+  },
+  "stats": {
+    "jokesViewed": "Chistes Vistos",
+    "jokesLiked": "Chistes que te Gustaron",
+    "favoriteCategory": "Categoría Favorita",
+    "viewStats": "Ver Estadísticas"
+  },
+  "onboarding": {
+    "welcome": "¡Bienvenido a GiggleGlide!",
+    "howItWorks": "Cómo funciona",
+    "step1": "Desliza a la derecha para guardar chistes que te gusten",
+    "step2": "Desliza a la izquierda para pasar al siguiente chiste",
+    "step3": "Accede a tus favoritos en cualquier momento",
+    "getStarted": "Comenzar",
+    "skip": "Omitir"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "app": {
+    "name": "GiggleGlide",
+    "tagline": "Swipe for Smiles"
+  },
+  "navigation": {
+    "home": "Home",
+    "favorites": "Favorites",
+    "settings": "Settings",
+    "about": "About"
+  },
+  "home": {
+    "loading": "Loading jokes...",
+    "noJokes": "No jokes available",
+    "errorLoading": "Error loading jokes",
+    "retry": "Retry",
+    "swipeLeft": "Swipe left to skip",
+    "swipeRight": "Swipe right to save"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "selectLanguage": "Select Language",
+    "notifications": "Notifications",
+    "dailyJoke": "Daily Joke Reminder",
+    "darkMode": "Dark Mode",
+    "clearData": "Clear Data",
+    "clearFavorites": "Clear Favorites",
+    "clearConfirm": "Are you sure you want to clear all favorites?",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "version": "Version"
+  },
+  "favorites": {
+    "title": "Favorite Jokes",
+    "empty": "No favorite jokes yet",
+    "emptyHint": "Swipe right on jokes to save them here",
+    "remove": "Remove",
+    "share": "Share",
+    "copied": "Copied to clipboard"
+  },
+  "categories": {
+    "all": "All",
+    "programming": "Programming",
+    "dad": "Dad Jokes",
+    "pun": "Puns",
+    "oneliners": "One-liners",
+    "knock-knock": "Knock Knock",
+    "animals": "Animals"
+  },
+  "errors": {
+    "general": "Something went wrong",
+    "network": "Network error. Please check your connection.",
+    "loadFailed": "Failed to load jokes",
+    "saveFailed": "Failed to save joke",
+    "removeFailed": "Failed to remove joke"
+  },
+  "actions": {
+    "skip": "Skip",
+    "like": "Like",
+    "share": "Share",
+    "copyText": "Copy Text",
+    "tryAgain": "Try Again"
+  },
+  "stats": {
+    "jokesViewed": "Jokes Viewed",
+    "jokesLiked": "Jokes Liked",
+    "favoriteCategory": "Favorite Category",
+    "viewStats": "View Stats"
+  },
+  "onboarding": {
+    "welcome": "Welcome to GiggleGlide!",
+    "howItWorks": "How it works",
+    "step1": "Swipe right to save jokes you love",
+    "step2": "Swipe left to skip to the next joke",
+    "step3": "Access your favorites anytime",
+    "getStarted": "Get Started",
+    "skip": "Skip"
+  }
+}
