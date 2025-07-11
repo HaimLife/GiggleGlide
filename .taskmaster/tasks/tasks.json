@@ -175,7 +175,7 @@
               2
             ],
             "details": "Wrap JokeCard in PanGestureHandler with gesture event handlers. Track translation X/Y values to determine swipe direction. Define threshold values for triggering actions (left=-100, right=100, up=-150). Implement velocity-based gesture recognition for quick swipes. Add gesture state management to prevent multiple triggers. Create smooth gesture following with card rotation based on drag position.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test swipe recognition in all three directions, verify threshold values trigger correctly, test quick vs slow swipes"
           },
           {
@@ -186,7 +186,7 @@
               3
             ],
             "details": "Implement animated overlays using Reanimated 2 shared values. Create opacity animations for like (green), neutral (grey), and dislike (red) overlays based on swipe position. Add card rotation animation during swipe (tilt based on drag direction). Implement spring animations for card return when gesture cancelled. Create exit animations when swipe completed. Add haptic feedback on action trigger using expo-haptics.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verify color overlays appear at correct thresholds, animations run at 60fps, haptic feedback triggers on actions"
           },
           {
@@ -197,7 +197,7 @@
               4
             ],
             "details": "Add pull-to-refresh gesture as fallback for next joke. Create action buttons below card for accessibility (like/neutral/dislike buttons). Implement VoiceOver/TalkBack labels for all interactive elements. Add keyboard navigation support for accessibility. Create gesture hints for first-time users. Ensure all animations respect reduced motion settings. Test with screen readers on both platforms.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test with VoiceOver on iOS and TalkBack on Android, verify all actions accessible via buttons, test reduced motion mode"
           }
         ]
@@ -257,7 +257,7 @@
               2
             ],
             "details": "Create PreferencesService class to handle all preference CRUD operations with SQLite. Implement React Context or Redux for global preference state management. Create hooks for accessing and updating preferences (useLanguage, useNotificationSettings, etc.). Ensure preferences load on app start and update UI reactively. Add migration logic for preference schema changes. Implement preference export/import functionality.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test preferences persist across app restarts, state updates propagate correctly, migrations work, default values apply"
           },
           {
@@ -268,7 +268,7 @@
               3
             ],
             "details": "Create OnboardingScreen with swipeable pages using PagerView or similar. Design welcome screen explaining app concept. Add language selection screen with auto-detection and manual override. Create joke category preference screen with visual category cards. Add optional notification opt-in screen. Implement skip option and progress indicators. Store onboarding completion flag to show only once.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test onboarding shows only on first launch, all selections save correctly, skip functionality works, progress tracking accurate"
           },
           {
@@ -279,7 +279,7 @@
               3
             ],
             "details": "Create LanguageChip component showing current language code/flag. Add to top navigation bar across all screens. Implement dropdown or modal for quick language switching without entering settings. Update all screens immediately when language changes. Add subtle animation for language change feedback. Ensure chip doesn't interfere with navigation gestures. Cache frequently used languages for quick access.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test language switches immediately update all UI text, chip appears consistently, quick switch works smoothly"
           }
         ]
@@ -404,7 +404,7 @@
               2
             ],
             "details": "Initialize Alembic with 'alembic init alembic'. Configure alembic.ini with database URL from environment. Update env.py to use async migrations and import all models. Create initial migration with 'alembic revision --autogenerate'. Review and adjust generated migration for indexes and constraints. Add seed data migration for initial tags and sample jokes. Create migration testing workflow.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test migrations run up and down successfully, verify schema matches models, test on fresh database"
           },
           {
@@ -415,7 +415,7 @@
               3
             ],
             "details": "Create database/session.py with async engine using create_async_engine. Configure connection pool settings (pool_size, max_overflow, pool_timeout). Implement async session factory using async_sessionmaker. Create dependency injection function for FastAPI routes. Add database health check endpoint. Implement proper session cleanup and error handling. Configure query logging for development.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test connection pooling under load, verify sessions close properly, test transaction rollback on errors"
           },
           {
@@ -426,7 +426,7 @@
               4
             ],
             "details": "Create base repository class with generic CRUD operations. Implement specific repositories: JokeRepository (get_random_unseen, get_by_tags, mark_as_seen), UserRepository (get_or_create_by_device_uuid, update_preferences), TagRepository (get_all_by_category, get_popular), FeedbackRepository (record_feedback, get_user_sentiment_stats). Add methods for bulk operations and complex queries. Implement query optimization with eager loading where needed. Add comprehensive error handling and logging.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Unit test each repository method, test concurrent operations, verify query performance, test error scenarios"
           }
         ]
@@ -490,7 +490,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T15:22:16.429Z",
-      "updated": "2025-07-11T14:39:44.859Z",
+      "updated": "2025-07-11T16:02:38.536Z",
       "description": "Tasks for master context"
     }
   }

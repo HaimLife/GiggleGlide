@@ -11,13 +11,11 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
-import { useTranslation } from '../hooks/useTranslation';
-import { changeLanguage, getAvailableLanguages } from '../i18n';
+import { useTranslation } from 'react-i18next';
+import { getAvailableLanguages } from '../i18n';
+import { AppHeader } from '../components/AppHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { version as appVersion } from '../../package.json';
 
 interface SettingsScreenProps {
   navigation?: any; // Use proper navigation type from your navigation setup
@@ -27,12 +25,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { t, i18n } = useTranslation();
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
-  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
   const [notificationTime, setNotificationTime] = useState('09:00');
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
-
-  const availableLanguages = getAvailableLanguages();
 
   // Load saved preferences on mount
   useEffect(() => {
@@ -76,23 +70,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleLanguageChange = async (language: string) => {
-    if (language === selectedLanguage) return;
-
-    setIsChangingLanguage(true);
-    try {
-      await changeLanguage(language);
-      setSelectedLanguage(language);
-    } catch (error) {
-      console.error('Failed to change language:', error);
-      Alert.alert(
-        t('errors.general'),
-        'Failed to change language. Please try again.'
-      );
-    } finally {
-      setIsChangingLanguage(false);
-    }
-  };
 
   const handleClearFavorites = () => {
     Alert.alert(
@@ -183,43 +160,22 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
   if (isLoadingPreferences) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.container}>
+        <AppHeader title={t('settings.title')} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#667eea" />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <View style={styles.container}>
+      <AppHeader title={t('settings.title')} />
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Language Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>{t('settings.selectLanguage')}</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedLanguage}
-                onValueChange={handleLanguageChange}
-                enabled={!isChangingLanguage}
-                style={styles.picker}
-              >
-                {availableLanguages.map((lang) => (
-                  <Picker.Item
-                    key={lang.code}
-                    label={lang.name}
-                    value={lang.code}
-                  />
-                ))}
-              </Picker>
-            </View>
-          </View>
-        </View>
 
         {/* Appearance Settings */}
         <View style={styles.section}>
@@ -269,51 +225,51 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
         {/* App Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.about')}</Text>
+          <Text style={styles.sectionTitle}>About</Text>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>{t('settings.version')}</Text>
-            <Text style={styles.infoValue}>{appVersion || '1.0.0'}</Text>
+            <Text style={styles.infoValue}>1.0.0</Text>
           </View>
           <TouchableOpacity 
             style={styles.linkButton}
             onPress={() => Linking.openURL('https://giggleglide.com/privacy')}
           >
-            <Text style={styles.linkButtonText}>{t('settings.privacyPolicy')}</Text>
+            <Text style={styles.linkButtonText}>Privacy Policy</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.linkButton}
             onPress={() => Linking.openURL('https://giggleglide.com/terms')}
           >
-            <Text style={styles.linkButtonText}>{t('settings.termsOfService')}</Text>
+            <Text style={styles.linkButtonText}>Terms of Service</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.linkButton}
             onPress={() => Linking.openURL('mailto:support@giggleglide.com')}
           >
-            <Text style={styles.linkButtonText}>{t('settings.contactSupport')}</Text>
+            <Text style={styles.linkButtonText}>Contact Support</Text>
           </TouchableOpacity>
         </View>
 
         {/* App Statistics */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.statistics')}</Text>
+          <Text style={styles.sectionTitle}>Statistics</Text>
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>{t('settings.jokesViewed')}</Text>
+              <Text style={styles.statLabel}>Jokes Viewed</Text>
               <Text style={styles.statValue}>0</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>{t('settings.jokesLiked')}</Text>
+              <Text style={styles.statLabel}>Jokes Liked</Text>
               <Text style={styles.statValue}>0</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>{t('settings.favoritesSaved')}</Text>
+              <Text style={styles.statLabel}>Favorites Saved</Text>
               <Text style={styles.statValue}>0</Text>
             </View>
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -371,17 +327,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f9f9f9',
-  },
-  picker: {
-    width: 150,
-    height: Platform.OS === 'ios' ? 150 : 50,
   },
   dangerButton: {
     backgroundColor: '#ff4444',

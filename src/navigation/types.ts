@@ -3,4 +3,5 @@ export type RootStackParamList = {
   Details: undefined;
   Settings: undefined;
   Favorites: undefined;
+  Onboarding: undefined;
 };
