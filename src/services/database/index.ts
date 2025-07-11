@@ -3,6 +3,7 @@ export { DatabaseInitializer } from './DatabaseInitializer';
 export { SchemaManager } from './SchemaManager';
 export { MigrationManager } from './MigrationManager';
 export { JokeService } from './JokeService';
+export { EnhancedJokeService } from './EnhancedJokeService';
 export { TABLES, DATABASE_CONFIG } from './config';
 export { SEED_JOKES, SEED_JOKES_STATS } from './seedJokes';
 export type { Migration } from './migrations';
