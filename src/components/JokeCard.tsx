@@ -5,15 +5,34 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
-  PanResponder,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import {
+  PanGestureHandler,
+  State,
+  PanGestureHandlerStateChangeEvent,
+  PanGestureHandlerGestureEvent,
+} from 'react-native-gesture-handler';
+import ReAnimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  useAnimatedGestureHandler,
+  withSpring,
+  withTiming,
+  runOnJS,
+  interpolate,
+  Extrapolate,
+} from 'react-native-reanimated';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const SWIPE_THRESHOLD = screenWidth * 0.25;
 const SWIPE_OUT_DURATION = 250;
+const SWIPE_VELOCITY_THRESHOLD = 800;
+const VERTICAL_SWIPE_THRESHOLD = screenHeight * 0.2;
+
+const AnimatedView = ReAnimated.createAnimatedComponent(View);
 
 interface JokeCardProps {
   joke: {
@@ -23,6 +42,7 @@ interface JokeCardProps {
   };
   onSwipeLeft: (id: string) => void;
   onSwipeRight: (id: string) => void;
+  onSwipeUp?: (id: string) => void;
   isActive: boolean;
   isLoading?: boolean;
   error?: string | null;
@@ -61,104 +81,147 @@ const JokeCard: React.FC<JokeCardProps> = ({
   joke,
   onSwipeLeft,
   onSwipeRight,
+  onSwipeUp,
   isActive,
   isLoading = false,
   error = null,
 }) => {
-  const position = useRef(new Animated.ValueXY()).current;
-  const rotateValue = useRef(new Animated.Value(0)).current;
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
 
-  const rotation = rotateValue.interpolate({
-    inputRange: [-screenWidth / 2, 0, screenWidth / 2],
-    outputRange: ['-10deg', '0deg', '10deg'],
-    extrapolate: 'clamp',
-  });
-
-  const likeOpacity = position.x.interpolate({
-    inputRange: [-screenWidth / 4, 0, screenWidth / 4],
-    outputRange: [0, 0, 1],
-    extrapolate: 'clamp',
-  });
-
-  const nopeOpacity = position.x.interpolate({
-    inputRange: [-screenWidth / 4, 0, screenWidth / 4],
-    outputRange: [1, 0, 0],
-    extrapolate: 'clamp',
-  });
-
-  const nextCardOpacity = position.x.interpolate({
-    inputRange: [-screenWidth / 4, 0, screenWidth / 4],
-    outputRange: [1, 1, 1],
-    extrapolate: 'clamp',
-  });
-
-  const nextCardScale = position.x.interpolate({
-    inputRange: [-screenWidth / 4, 0, screenWidth / 4],
-    outputRange: [1, 0.8, 1],
-    extrapolate: 'clamp',
-  });
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => isActive,
-      onMoveShouldSetPanResponder: () => isActive,
-      onPanResponderGrant: () => {
-        position.setOffset({
-          x: (position.x as any)._value,
-          y: (position.y as any)._value,
-        });
-        position.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: (_, gestureState) => {
-        position.setValue({ x: gestureState.dx, y: gestureState.dy });
-        rotateValue.setValue(gestureState.dx);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        position.flattenOffset();
-
-        if (gestureState.dx > SWIPE_THRESHOLD) {
-          // Swipe right - Like
-          Animated.timing(position, {
-            toValue: { x: screenWidth + 100, y: gestureState.dy },
-            duration: SWIPE_OUT_DURATION,
-            useNativeDriver: false,
-          }).start(() => {
-            onSwipeRight(joke.id);
-            position.setValue({ x: 0, y: 0 });
-            rotateValue.setValue(0);
-          });
-        } else if (gestureState.dx < -SWIPE_THRESHOLD) {
-          // Swipe left - Nope
-          Animated.timing(position, {
-            toValue: { x: -screenWidth - 100, y: gestureState.dy },
-            duration: SWIPE_OUT_DURATION,
-            useNativeDriver: false,
-          }).start(() => {
-            onSwipeLeft(joke.id);
-            position.setValue({ x: 0, y: 0 });
-            rotateValue.setValue(0);
-          });
-        } else {
-          // Spring back to center
-          Animated.spring(position, {
-            toValue: { x: 0, y: 0 },
-            friction: 4,
-            useNativeDriver: false,
-          }).start();
-          Animated.spring(rotateValue, {
-            toValue: 0,
-            friction: 4,
-            useNativeDriver: false,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  const animatedCardStyle = {
-    transform: [...position.getTranslateTransform(), { rotate: rotation }],
-    opacity: nextCardOpacity,
+  const handleSwipeLeft = () => {
+    'worklet';
+    runOnJS(onSwipeLeft)(joke.id);
   };
+
+  const handleSwipeRight = () => {
+    'worklet';
+    runOnJS(onSwipeRight)(joke.id);
+  };
+
+  const handleSwipeUp = () => {
+    'worklet';
+    if (onSwipeUp) {
+      runOnJS(onSwipeUp)(joke.id);
+    }
+  };
+
+  const gestureHandler = useAnimatedGestureHandler<
+    PanGestureHandlerGestureEvent,
+    { startX: number; startY: number }
+  >({
+    onStart: (_, ctx) => {
+      ctx.startX = translateX.value;
+      ctx.startY = translateY.value;
+    },
+    onActive: (event, ctx) => {
+      if (!isActive) return;
+      translateX.value = ctx.startX + event.translationX;
+      translateY.value = ctx.startY + event.translationY;
+    },
+    onEnd: (event) => {
+      if (!isActive) return;
+
+      const velocityX = event.velocityX;
+      const velocityY = event.velocityY;
+      const translationX = event.translationX;
+      const translationY = event.translationY;
+
+      // Check for upward swipe (neutral)
+      if (
+        Math.abs(translationY) > Math.abs(translationX) &&
+        translationY < -VERTICAL_SWIPE_THRESHOLD &&
+        velocityY < -SWIPE_VELOCITY_THRESHOLD
+      ) {
+        translateY.value = withTiming(-screenHeight, { duration: SWIPE_OUT_DURATION }, () => {
+          handleSwipeUp();
+          translateX.value = 0;
+          translateY.value = 0;
+        });
+        return;
+      }
+
+      // Check for right swipe (like)
+      if (
+        translationX > SWIPE_THRESHOLD ||
+        (translationX > screenWidth * 0.1 && velocityX > SWIPE_VELOCITY_THRESHOLD)
+      ) {
+        translateX.value = withTiming(screenWidth + 100, { duration: SWIPE_OUT_DURATION }, () => {
+          handleSwipeRight();
+          translateX.value = 0;
+          translateY.value = 0;
+        });
+        return;
+      }
+
+      // Check for left swipe (dislike)
+      if (
+        translationX < -SWIPE_THRESHOLD ||
+        (translationX < -screenWidth * 0.1 && velocityX < -SWIPE_VELOCITY_THRESHOLD)
+      ) {
+        translateX.value = withTiming(-screenWidth - 100, { duration: SWIPE_OUT_DURATION }, () => {
+          handleSwipeLeft();
+          translateX.value = 0;
+          translateY.value = 0;
+        });
+        return;
+      }
+
+      // Spring back to center
+      translateX.value = withSpring(0);
+      translateY.value = withSpring(0);
+    },
+  });
+
+  const cardStyle = useAnimatedStyle(() => {
+    const rotate = interpolate(
+      translateX.value,
+      [-screenWidth / 2, 0, screenWidth / 2],
+      [-10, 0, 10],
+      Extrapolate.CLAMP
+    );
+
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { rotate: `${rotate}deg` },
+      ],
+    };
+  });
+
+  const likeOpacityStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(
+        translateX.value,
+        [-screenWidth / 4, 0, screenWidth / 4],
+        [0, 0, 1],
+        Extrapolate.CLAMP
+      ),
+    };
+  });
+
+  const nopeOpacityStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(
+        translateX.value,
+        [-screenWidth / 4, 0, screenWidth / 4],
+        [1, 0, 0],
+        Extrapolate.CLAMP
+      ),
+    };
+  });
+
+  const neutralOpacityStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(
+        translateY.value,
+        [-screenHeight / 4, 0, screenHeight / 4],
+        [1, 0, 0],
+        Extrapolate.CLAMP
+      ),
+    };
+  });
 
   // Loading state
   if (isLoading) {
@@ -182,44 +245,49 @@ const JokeCard: React.FC<JokeCardProps> = ({
   }
 
   return (
-    <Animated.View
-      style={[
-        styles.card,
-        animatedCardStyle,
-        !isActive && {
-          transform: [{ scale: nextCardScale }],
-        },
-      ]}
-      {...panResponder.panHandlers}
-    >
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.gradient}
+    <PanGestureHandler onGestureEvent={gestureHandler} enabled={isActive}>
+      <AnimatedView
+        style={[
+          styles.card,
+          cardStyle,
+          !isActive && styles.inactiveCard,
+        ]}
       >
-        {joke.category && (
-          <Text style={styles.category}>{joke.category.toUpperCase()}</Text>
-        )}
-        <Text
-          style={styles.jokeText}
-          adjustsFontSizeToFit
-          numberOfLines={8}
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.gradient}
         >
-          {joke.text}
-        </Text>
+          {joke.category && (
+            <Text style={styles.category}>{joke.category.toUpperCase()}</Text>
+          )}
+          <Text
+            style={styles.jokeText}
+            adjustsFontSizeToFit
+            numberOfLines={8}
+          >
+            {joke.text}
+          </Text>
 
-        <Animated.View
-          style={[styles.likeContainer, { opacity: likeOpacity }]}
-        >
-          <Text style={styles.likeText}>LIKE</Text>
-        </Animated.View>
+          <AnimatedView
+            style={[styles.likeContainer, likeOpacityStyle]}
+          >
+            <Text style={styles.likeText}>LIKE</Text>
+          </AnimatedView>
 
-        <Animated.View
-          style={[styles.nopeContainer, { opacity: nopeOpacity }]}
-        >
-          <Text style={styles.nopeText}>NOPE</Text>
-        </Animated.View>
-      </LinearGradient>
-    </Animated.View>
+          <AnimatedView
+            style={[styles.nopeContainer, nopeOpacityStyle]}
+          >
+            <Text style={styles.nopeText}>NOPE</Text>
+          </AnimatedView>
+
+          <AnimatedView
+            style={[styles.neutralContainer, neutralOpacityStyle]}
+          >
+            <Text style={styles.neutralText}>NEUTRAL</Text>
+          </AnimatedView>
+        </LinearGradient>
+      </AnimatedView>
+    </PanGestureHandler>
   );
 };
 
@@ -336,6 +404,23 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#F44336',
     fontWeight: 'bold',
+  },
+  neutralContainer: {
+    position: 'absolute',
+    top: 50,
+    alignSelf: 'center',
+    padding: 10,
+    borderWidth: 4,
+    borderColor: '#FFC107',
+    borderRadius: 10,
+  },
+  neutralText: {
+    fontSize: 32,
+    color: '#FFC107',
+    fontWeight: 'bold',
+  },
+  inactiveCard: {
+    transform: [{ scale: 0.8 }],
   },
 });
 

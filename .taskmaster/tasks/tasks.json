@@ -164,7 +164,7 @@
               1
             ],
             "details": "Create JokeCard.tsx component with card-style design. Implement responsive sizing that works on different screen sizes. Add proper typography with adjustable font sizes for joke text. Create card shadow/elevation effects. Ensure proper padding and margins for one-handed operation. Add placeholder loading state and error boundary.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test component renders correctly on different screen sizes, text is readable, loading states work properly"
           },
           {
@@ -175,7 +175,7 @@
               2
             ],
             "details": "Wrap JokeCard in PanGestureHandler with gesture event handlers. Track translation X/Y values to determine swipe direction. Define threshold values for triggering actions (left=-100, right=100, up=-150). Implement velocity-based gesture recognition for quick swipes. Add gesture state management to prevent multiple triggers. Create smooth gesture following with card rotation based on drag position.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test swipe recognition in all three directions, verify threshold values trigger correctly, test quick vs slow swipes"
           },
           {
@@ -246,7 +246,7 @@
               1
             ],
             "details": "Create SettingsScreen.tsx with section-based layout (Account, Preferences, Notifications, About). Implement language picker using native picker or custom modal with language names in their native script. Add notification toggle switch with explanation text. Create content filtering options with multi-select for joke categories. Add app version, privacy policy, and terms of service links. Ensure proper styling that matches app theme.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test all UI elements render correctly, navigation works, settings sections are properly organized, UI is responsive"
           },
           {
@@ -257,7 +257,7 @@
               2
             ],
             "details": "Create PreferencesService class to handle all preference CRUD operations with SQLite. Implement React Context or Redux for global preference state management. Create hooks for accessing and updating preferences (useLanguage, useNotificationSettings, etc.). Ensure preferences load on app start and update UI reactively. Add migration logic for preference schema changes. Implement preference export/import functionality.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test preferences persist across app restarts, state updates propagate correctly, migrations work, default values apply"
           },
           {
@@ -393,7 +393,7 @@
               1
             ],
             "details": "Create models/base.py with declarative base and common mixins (timestamps, id). Define models: Joke (id, text, language, created_at, creator_id, is_flagged), Tag (id, name, category), JokeTag (joke_id, tag_id), User (id, device_uuid, created_at), UserTagScore (user_id, tag_id, score, sample_count), UserJokeFeedback (id, user_id, joke_id, sentiment, created_at), SeenJoke (user_id, joke_id, created_at). Add proper foreign keys, unique constraints, and cascade rules. Create composite indexes for common queries.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Verify models compile without errors, relationships work bidirectionally, constraints enforce data integrity"
           },
           {
@@ -404,7 +404,7 @@
               2
             ],
             "details": "Initialize Alembic with 'alembic init alembic'. Configure alembic.ini with database URL from environment. Update env.py to use async migrations and import all models. Create initial migration with 'alembic revision --autogenerate'. Review and adjust generated migration for indexes and constraints. Add seed data migration for initial tags and sample jokes. Create migration testing workflow.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test migrations run up and down successfully, verify schema matches models, test on fresh database"
           },
           {
@@ -490,7 +490,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T15:22:16.429Z",
-      "updated": "2025-07-11T14:29:57.545Z",
+      "updated": "2025-07-11T14:39:44.859Z",
       "description": "Tasks for master context"
     }
   }
