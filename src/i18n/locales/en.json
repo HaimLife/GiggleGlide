@@ -69,12 +69,55 @@
     "viewStats": "View Stats"
   },
   "onboarding": {
-    "welcome": "Welcome to GiggleGlide!",
-    "howItWorks": "How it works",
-    "step1": "Swipe right to save jokes you love",
-    "step2": "Swipe left to skip to the next joke",
-    "step3": "Access your favorites anytime",
-    "getStarted": "Get Started",
-    "skip": "Skip"
+    "welcome": {
+      "title": "Welcome to GiggleGlide!",
+      "subtitle": "Swipe through jokes and find your perfect laugh",
+      "getStarted": "Get Started"
+    },
+    "language": {
+      "title": "Choose Your Language",
+      "subtitle": "Select your preferred language for jokes",
+      "detected": "Auto-detected",
+      "manual": "Manual Selection"
+    },
+    "categories": {
+      "title": "Pick Your Humor",
+      "subtitle": "Select joke categories you enjoy (choose at least 1)",
+      "dadJokes": "Dad Jokes",
+      "puns": "Puns",
+      "knockKnock": "Knock Knock",
+      "oneLiners": "One-Liners",
+      "observational": "Observational",
+      "tech": "Tech Humor",
+      "animals": "Animal Jokes",
+      "food": "Food Jokes"
+    },
+    "notifications": {
+      "title": "Daily Laughs",
+      "subtitle": "Get a daily joke notification to brighten your day",
+      "enable": "Enable Notifications",
+      "enabled": "Notifications Enabled ✓",
+      "hint": "You can change this anytime in Settings",
+      "disabled": "Notifications Disabled",
+      "disabledMessage": "You can enable notifications later in Settings."
+    },
+    "final": {
+      "title": "Ready to Laugh!",
+      "subtitle": "Your personalized joke experience is ready",
+      "startLaughing": "Start Laughing!"
+    },
+    "navigation": {
+      "skip": "Skip",
+      "next": "Next",
+      "back": "Back",
+      "finish": "Finish"
+    },
+    "progress": {
+      "step": "Step {{current}} of {{total}}"
+    },
+    "errors": {
+      "savePreferences": "Failed to save preferences. Please try again.",
+      "loadPreferences": "Failed to load preferences."
+    }
   }
 }

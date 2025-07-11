@@ -13,4 +13,5 @@ module.exports = {
     '^@constants/(.*)$': '<rootDir>/src/constants/$1',
     '^@navigation/(.*)$': '<rootDir>/src/navigation/$1',
   },
+  setupFiles: ['<rootDir>/jest.setup.js'],
 };

@@ -69,12 +69,55 @@
     "viewStats": "Ver Estadísticas"
   },
   "onboarding": {
-    "welcome": "¡Bienvenido a GiggleGlide!",
-    "howItWorks": "Cómo funciona",
-    "step1": "Desliza a la derecha para guardar chistes que te gusten",
-    "step2": "Desliza a la izquierda para pasar al siguiente chiste",
-    "step3": "Accede a tus favoritos en cualquier momento",
-    "getStarted": "Comenzar",
-    "skip": "Omitir"
+    "welcome": {
+      "title": "¡Bienvenido a GiggleGlide!",
+      "subtitle": "Desliza por los chistes y encuentra tu risa perfecta",
+      "getStarted": "Comenzar"
+    },
+    "language": {
+      "title": "Elige Tu Idioma",
+      "subtitle": "Selecciona tu idioma preferido para los chistes",
+      "detected": "Auto-detectado",
+      "manual": "Selección Manual"
+    },
+    "categories": {
+      "title": "Elige Tu Humor",
+      "subtitle": "Selecciona las categorías de chistes que disfrutas (elige al menos 1)",
+      "dadJokes": "Chistes de Papá",
+      "puns": "Juegos de Palabras",
+      "knockKnock": "Toc Toc",
+      "oneLiners": "Frases Ingeniosas",
+      "observational": "Observacional",
+      "tech": "Humor Tecnológico",
+      "animals": "Chistes de Animales",
+      "food": "Chistes de Comida"
+    },
+    "notifications": {
+      "title": "Risas Diarias",
+      "subtitle": "Recibe una notificación diaria de chistes para alegrar tu día",
+      "enable": "Habilitar Notificaciones",
+      "enabled": "Notificaciones Habilitadas ✓",
+      "hint": "Puedes cambiar esto en cualquier momento en Configuración",
+      "disabled": "Notificaciones Deshabilitadas",
+      "disabledMessage": "Puedes habilitar las notificaciones más tarde en Configuración."
+    },
+    "final": {
+      "title": "¡Listo para Reír!",
+      "subtitle": "Tu experiencia personalizada de chistes está lista",
+      "startLaughing": "¡Comenzar a Reír!"
+    },
+    "navigation": {
+      "skip": "Omitir",
+      "next": "Siguiente",
+      "back": "Atrás",
+      "finish": "Finalizar"
+    },
+    "progress": {
+      "step": "Paso {{current}} de {{total}}"
+    },
+    "errors": {
+      "savePreferences": "Error al guardar las preferencias. Inténtalo de nuevo.",
+      "loadPreferences": "Error al cargar las preferencias."
+    }
   }
 }
