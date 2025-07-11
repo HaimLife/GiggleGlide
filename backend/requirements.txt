@@ -14,3 +14,6 @@ sqlalchemy[asyncio]==2.0.23
 asyncpg==0.29.0
 alembic==1.13.0
 psycopg2-binary==2.9.9
+openai==1.35.3
+redis==5.0.1
+tenacity==8.2.3

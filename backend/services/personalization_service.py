@@ -11,6 +11,7 @@ from ..database.repositories.personalization_repository import PersonalizationRe
 from ..database.repositories.tag_repository import TagRepository
 from ..database.repositories.joke_repository import JokeRepository
 from ..database.models import Joke, User
+from .ai_joke_service import AIJokeService, JokeGenerationRequest
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +44,22 @@ class PersonalizationService:
         personalization_repo: PersonalizationRepository,
         tag_repo: TagRepository,
         joke_repo: JokeRepository,
+        ai_joke_service: Optional[AIJokeService] = None,
         config: Optional[RecommendationConfig] = None
     ):
         self.personalization_repo = personalization_repo
         self.tag_repo = tag_repo
         self.joke_repo = joke_repo
+        self.ai_joke_service = ai_joke_service
         self.config = config or RecommendationConfig()
         
         # In-memory cache for user preferences (would be Redis in production)
         self._preference_cache = {}
         self._cache_expiry = {}
+        
+        # AI generation tracking
+        self._last_ai_generation = {}
+        self._ai_generation_cooldown = timedelta(minutes=5)
 
     async def get_personalized_recommendations(
         self,
@@ -496,12 +503,108 @@ class PersonalizationService:
     ) -> RecommendationResult:
         """Get fallback recommendations when personalization fails."""
         try:
-            # Get trending jokes as fallback
+            # First try to get trending jokes
             trending_jokes = await self.joke_repo.get_trending_jokes(
                 language=language,
                 limit=limit
             )
 
+            # If we have enough trending jokes, use them
+            if len(trending_jokes) >= limit:
+                recommendations = [
+                    (joke, 0.5, 'fallback') for joke in trending_jokes
+                ]
+                
+                return RecommendationResult(
+                    jokes=recommendations,
+                    strategy_breakdown={'fallback': len(recommendations)},
+                    performance_metrics={'fallback': True},
+                    cache_hit=False
+                )
+
+            # If not enough jokes and AI service is available, generate new ones
+            if self.ai_joke_service and await self._can_generate_ai_jokes(user_id):
+                try:
+                    logger.info(f"Generating AI jokes for user {user_id} as fallback")
+                    
+                    # Get user preferences if available
+                    user_tags = {}
+                    try:
+                        tag_scores = await self.tag_repo.get_user_tag_scores(user_id)
+                        
+                        # Group by category
+                        for score in tag_scores:
+                            if score.score > 0:
+                                category = score.tag.category
+                                if category not in user_tags:
+                                    user_tags[category] = []
+                                user_tags[category].append((score.tag.value, score.score))
+                    except:
+                        # If can't get user preferences, use defaults
+                        pass
+                    
+                    # Generate personalized jokes if we have preferences, otherwise generic
+                    if user_tags:
+                        generated_jokes = await self.ai_joke_service.generate_personalized_jokes(
+                            user_id=user_id,
+                            user_tags=user_tags,
+                            language=language,
+                            count=limit - len(trending_jokes)
+                        )
+                    else:
+                        generated_jokes = await self.ai_joke_service.generate_fallback_jokes(
+                            language=language,
+                            count=limit - len(trending_jokes)
+                        )
+                    
+                    # Store generated jokes
+                    ai_recommendations = []
+                    for gen_joke in generated_jokes:
+                        # Store in database
+                        joke_data = {
+                            "text": gen_joke.text,
+                            "language": gen_joke.language,
+                            "source": "ai_generated"
+                        }
+                        stored_joke = await self.joke_repo.create(**joke_data)
+                        
+                        # Add tags
+                        for category, tag_names in gen_joke.tags.items():
+                            for tag_name in tag_names:
+                                tags = await self.tag_repo.get_tags_by_category(category)
+                                tag = next((t for t in tags if t.value == tag_name), None)
+                                if tag:
+                                    await self.tag_repo.add_joke_tag(
+                                        joke_id=stored_joke.id,
+                                        tag_id=tag.id,
+                                        confidence=gen_joke.confidence
+                                    )
+                        
+                        ai_recommendations.append((stored_joke, 0.7, 'ai_generated'))
+                    
+                    # Update generation tracking
+                    self._last_ai_generation[user_id] = datetime.utcnow()
+                    
+                    # Combine trending and AI-generated jokes
+                    all_recommendations = [
+                        (joke, 0.5, 'fallback') for joke in trending_jokes
+                    ] + ai_recommendations
+                    
+                    return RecommendationResult(
+                        jokes=all_recommendations[:limit],
+                        strategy_breakdown={
+                            'fallback': len(trending_jokes),
+                            'ai_generated': len(ai_recommendations)
+                        },
+                        performance_metrics={'ai_fallback': True},
+                        cache_hit=False
+                    )
+                    
+                except Exception as e:
+                    logger.error(f"AI generation failed: {str(e)}")
+                    # Continue with trending jokes only
+            
+            # Return whatever trending jokes we have
             recommendations = [
                 (joke, 0.5, 'fallback') for joke in trending_jokes
             ]
@@ -585,3 +688,15 @@ class PersonalizationService:
                 del self._preference_cache[key]
             if key in self._cache_expiry:
                 del self._cache_expiry[key]
+
+    async def _can_generate_ai_jokes(self, user_id: str) -> bool:
+        """Check if AI joke generation is allowed for this user."""
+        # Check if user is in cooldown
+        last_generation = self._last_ai_generation.get(user_id)
+        if last_generation:
+            time_since_last = datetime.utcnow() - last_generation
+            if time_since_last < self._ai_generation_cooldown:
+                logger.debug(f"User {user_id} in AI generation cooldown")
+                return False
+        
+        return True

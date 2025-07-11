@@ -12,6 +12,7 @@ from ..database.repositories.tag_repository import TagRepository
 from ..database.repositories.joke_repository import JokeRepository
 from ..database.repositories.user_repository import UserRepository
 from .personalization_service import PersonalizationService
+from .ai_joke_service import AIJokeService, JokeGenerationRequest
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +23,10 @@ class JobConfig:
     preference_learning_interval: int = 300  # 5 minutes
     metrics_calculation_interval: int = 3600  # 1 hour
     cleanup_interval: int = 86400  # 24 hours
+    ai_generation_interval: int = 7200  # 2 hours
     batch_size: int = 100
     max_concurrent_jobs: int = 5
+    ai_generation_batch_size: int = 10
 
 
 class BackgroundJobManager:
@@ -36,6 +39,7 @@ class BackgroundJobManager:
         tag_repo: TagRepository,
         joke_repo: JokeRepository,
         user_repo: UserRepository,
+        ai_joke_service: Optional[AIJokeService] = None,
         config: Optional[JobConfig] = None
     ):
         self.personalization_service = personalization_service
@@ -43,6 +47,7 @@ class BackgroundJobManager:
         self.tag_repo = tag_repo
         self.joke_repo = joke_repo
         self.user_repo = user_repo
+        self.ai_joke_service = ai_joke_service
         self.config = config or JobConfig()
         
         self._running = False
@@ -50,7 +55,8 @@ class BackgroundJobManager:
         self._job_stats = {
             'preference_learning': {'runs': 0, 'last_run': None, 'errors': 0},
             'metrics_calculation': {'runs': 0, 'last_run': None, 'errors': 0},
-            'data_cleanup': {'runs': 0, 'last_run': None, 'errors': 0}
+            'data_cleanup': {'runs': 0, 'last_run': None, 'errors': 0},
+            'ai_generation': {'runs': 0, 'last_run': None, 'errors': 0, 'jokes_generated': 0}
         }
 
     async def start(self):
@@ -72,6 +78,12 @@ class BackgroundJobManager:
         self._jobs['data_cleanup'] = asyncio.create_task(
             self._data_cleanup_job()
         )
+        
+        # Start AI generation job if service is available
+        if self.ai_joke_service:
+            self._jobs['ai_generation'] = asyncio.create_task(
+                self._ai_generation_job()
+            )
 
         logger.info("All background jobs started")
 
@@ -205,6 +217,36 @@ class BackgroundJobManager:
                 self._job_stats[job_name]['errors'] += 1
                 logger.error(f"Error in {job_name} job: {str(e)}")
                 await asyncio.sleep(1800)  # Wait 30 minutes before retrying
+
+    async def _ai_generation_job(self):
+        """Background job for generating AI jokes to maintain cache."""
+        job_name = 'ai_generation'
+        
+        while self._running:
+            try:
+                start_time = datetime.utcnow()
+                logger.debug(f"Starting {job_name} job")
+
+                # Generate jokes for different languages and tag combinations
+                await self._generate_joke_cache()
+
+                # Update job statistics
+                self._job_stats[job_name]['runs'] += 1
+                self._job_stats[job_name]['last_run'] = start_time
+                
+                processing_time = (datetime.utcnow() - start_time).total_seconds()
+                logger.info(f"Completed {job_name} job in {processing_time:.2f}s")
+
+                # Wait for next interval
+                await asyncio.sleep(self.config.ai_generation_interval)
+
+            except asyncio.CancelledError:
+                logger.info(f"Job {job_name} cancelled")
+                break
+            except Exception as e:
+                self._job_stats[job_name]['errors'] += 1
+                logger.error(f"Error in {job_name} job: {str(e)}")
+                await asyncio.sleep(600)  # Wait 10 minutes before retrying
 
     # Helper Methods
 
@@ -353,6 +395,75 @@ class BackgroundJobManager:
         for i in range(0, len(items), batch_size):
             batches.append(items[i:i + batch_size])
         return batches
+
+    async def _generate_joke_cache(self):
+        """Generate jokes to maintain cache levels."""
+        try:
+            # Check cache levels for each language
+            languages = ['en', 'es', 'fr']
+            
+            generation_requests = []
+            
+            for language in languages:
+                # Count existing jokes
+                joke_count = await self.joke_repo.count_by_language(language)
+                
+                # If below threshold, generate more
+                if joke_count < 100:  # Minimum 100 jokes per language
+                    jokes_needed = min(self.config.ai_generation_batch_size, 100 - joke_count)
+                    
+                    # Create generation requests with various tag combinations
+                    # Popular combinations
+                    generation_requests.append(JokeGenerationRequest(
+                        tags={
+                            "style": ["observational", "wordplay"],
+                            "format": ["setup_punchline", "one_liner"],
+                            "topic": ["technology", "food", "relationships"],
+                            "tone": ["lighthearted", "clever"]
+                        },
+                        language=language,
+                        count=jokes_needed // 3
+                    ))
+                    
+                    # Family-friendly combinations
+                    generation_requests.append(JokeGenerationRequest(
+                        tags={
+                            "style": ["silly", "physical"],
+                            "format": ["knock_knock", "question_answer"],
+                            "topic": ["animals", "school", "weather"],
+                            "tone": ["wholesome", "silly"]
+                        },
+                        language=language,
+                        count=jokes_needed // 3
+                    ))
+                    
+                    # Sophisticated combinations
+                    generation_requests.append(JokeGenerationRequest(
+                        tags={
+                            "style": ["sarcastic", "self_deprecating"],
+                            "format": ["narrative", "comparison"],
+                            "topic": ["work", "politics", "aging"],
+                            "tone": ["witty", "cynical"]
+                        },
+                        language=language,
+                        count=jokes_needed // 3
+                    ))
+            
+            if generation_requests:
+                # Batch generate and store
+                result = await self.ai_joke_service.batch_generate_and_store(generation_requests)
+                
+                self._job_stats['ai_generation']['jokes_generated'] += result['total_stored']
+                
+                logger.info(f"Generated {result['total_stored']} jokes, "
+                           f"cost: ${result['total_cost']:.4f}")
+                
+                if result['errors']:
+                    logger.warning(f"Generation errors: {result['errors']}")
+            
+        except Exception as e:
+            logger.error(f"Error in joke cache generation: {str(e)}")
+            raise
 
 
 class JobScheduler:

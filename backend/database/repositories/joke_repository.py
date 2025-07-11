@@ -655,3 +655,23 @@ class JokeRepository(BaseRepository[Joke, Dict[str, Any], Dict[str, Any]]):
             await self.session.rollback()
             logger.error(f"Error updating joke ratings: {str(e)}")
             raise RepositoryError(f"Failed to update joke ratings: {str(e)}")
+
+    async def count_by_language(self, language: str) -> int:
+        """
+        Count jokes by language.
+        
+        Args:
+            language: Language code to count
+            
+        Returns:
+            Number of jokes in the specified language
+        """
+        try:
+            query = select(func.count(Joke.id)).where(Joke.language == language)
+            result = await self.session.execute(query)
+            count = result.scalar() or 0
+            return count
+
+        except Exception as e:
+            logger.error(f"Error counting jokes by language {language}: {str(e)}")
+            raise RepositoryError(f"Failed to count jokes by language: {str(e)}")

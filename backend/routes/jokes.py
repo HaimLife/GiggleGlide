@@ -35,14 +35,26 @@ seen_jokes_db: Dict[str, set] = {}  # device_id -> set of joke_ids
 # Dependency to get personalization service
 async def get_personalization_service(session=Depends(get_session)) -> PersonalizationService:
     """Get personalization service instance."""
+    from services.ai_joke_service import AIJokeService
+    
     personalization_repo = PersonalizationRepository(session)
     tag_repo = TagRepository(session)
     joke_repo = JokeRepository(session)
     
+    # Initialize AI service if API key is configured
+    ai_joke_service = None
+    try:
+        from config import settings
+        if settings.OPENAI_API_KEY:
+            ai_joke_service = AIJokeService(joke_repo, tag_repo)
+    except:
+        pass
+    
     return PersonalizationService(
         personalization_repo=personalization_repo,
         tag_repo=tag_repo,
-        joke_repo=joke_repo
+        joke_repo=joke_repo,
+        ai_joke_service=ai_joke_service
     )
 
 @router.post("/next-joke", response_model=JokeResponse)

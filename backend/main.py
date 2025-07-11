@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from config import settings
-from routes import auth, jokes, health, personalization
+from routes import auth, jokes, health, personalization, ai_jokes
 from middleware.rate_limit import limiter, create_rate_limit_exceeded_handler
 from database.session import db_manager
 from middleware.error_handler import (
@@ -103,6 +103,7 @@ app.include_router(auth.router)
 app.include_router(jokes.router)
 app.include_router(health.router)
 app.include_router(personalization.router)
+app.include_router(ai_jokes.router)
 
 @app.get("/")
 async def root():
