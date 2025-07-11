@@ -77,7 +77,7 @@
         "dependencies": [
           1
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -118,7 +118,7 @@
               3
             ],
             "details": "Create repository classes or modules for each table with full CRUD operations. Implement prepared statements for all database operations to prevent SQL injection. Create functions for: inserting/updating/deleting jokes, managing user preferences, recording joke feedback and views, managing favorites. Include batch operations for bulk inserts and transactions for atomic operations. Add proper error handling and logging for all database operations.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit tests for each CRUD operation, test with various data types and edge cases, verify prepared statements prevent SQL injection"
           },
           {
@@ -129,7 +129,7 @@
               4
             ],
             "details": "Create a database service class that encapsulates all database operations and provides a clean interface for the app. Implement methods for common operations like getting random jokes, tracking user interactions, managing favorites, and retrieving user history. Add connection pooling, transaction management, and database health checks. Create utility functions for data serialization/deserialization and type safety. Implement proper cleanup and connection management.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Integration tests for the service layer, test concurrent operations, verify transaction rollback on errors, and test database cleanup"
           }
         ]
@@ -146,7 +146,61 @@
           2
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install and Configure Gesture Libraries",
+            "description": "Install and set up react-native-gesture-handler and react-native-reanimated for smooth gesture handling",
+            "dependencies": [],
+            "details": "Run 'npm install react-native-gesture-handler react-native-reanimated' or 'expo install react-native-gesture-handler react-native-reanimated'. Configure babel.config.js with reanimated plugin. Add GestureHandlerRootView to App.tsx. Verify installation by creating a basic draggable component. Configure worklet runtime for iOS and Android.",
+            "status": "pending",
+            "testStrategy": "Verify basic gesture recognition works, animations run on UI thread, no console warnings about missing configurations"
+          },
+          {
+            "id": 2,
+            "title": "Create JokeCard Component Structure",
+            "description": "Build the base JokeCard component with proper styling and layout for optimal readability",
+            "dependencies": [
+              1
+            ],
+            "details": "Create JokeCard.tsx component with card-style design. Implement responsive sizing that works on different screen sizes. Add proper typography with adjustable font sizes for joke text. Create card shadow/elevation effects. Ensure proper padding and margins for one-handed operation. Add placeholder loading state and error boundary.",
+            "status": "pending",
+            "testStrategy": "Test component renders correctly on different screen sizes, text is readable, loading states work properly"
+          },
+          {
+            "id": 3,
+            "title": "Implement Swipe Gesture Handler",
+            "description": "Add PanGestureHandler for detecting and handling swipe gestures in three directions",
+            "dependencies": [
+              2
+            ],
+            "details": "Wrap JokeCard in PanGestureHandler with gesture event handlers. Track translation X/Y values to determine swipe direction. Define threshold values for triggering actions (left=-100, right=100, up=-150). Implement velocity-based gesture recognition for quick swipes. Add gesture state management to prevent multiple triggers. Create smooth gesture following with card rotation based on drag position.",
+            "status": "pending",
+            "testStrategy": "Test swipe recognition in all three directions, verify threshold values trigger correctly, test quick vs slow swipes"
+          },
+          {
+            "id": 4,
+            "title": "Add Visual Feedback and Animations",
+            "description": "Create animated visual feedback with color overlays and smooth card transitions",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement animated overlays using Reanimated 2 shared values. Create opacity animations for like (green), neutral (grey), and dislike (red) overlays based on swipe position. Add card rotation animation during swipe (tilt based on drag direction). Implement spring animations for card return when gesture cancelled. Create exit animations when swipe completed. Add haptic feedback on action trigger using expo-haptics.",
+            "status": "pending",
+            "testStrategy": "Verify color overlays appear at correct thresholds, animations run at 60fps, haptic feedback triggers on actions"
+          },
+          {
+            "id": 5,
+            "title": "Implement Pull-to-Refresh and Accessibility",
+            "description": "Add alternative interaction methods and ensure full accessibility support",
+            "dependencies": [
+              4
+            ],
+            "details": "Add pull-to-refresh gesture as fallback for next joke. Create action buttons below card for accessibility (like/neutral/dislike buttons). Implement VoiceOver/TalkBack labels for all interactive elements. Add keyboard navigation support for accessibility. Create gesture hints for first-time users. Ensure all animations respect reduced motion settings. Test with screen readers on both platforms.",
+            "status": "pending",
+            "testStrategy": "Test with VoiceOver on iOS and TalkBack on Android, verify all actions accessible via buttons, test reduced motion mode"
+          }
+        ]
       },
       {
         "id": 4,
@@ -174,7 +228,61 @@
           2
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Setup Internationalization Framework",
+            "description": "Install and configure react-native-i18next for multi-language support",
+            "dependencies": [],
+            "details": "Install i18next, react-i18next, and react-native-i18next packages. Create i18n configuration file with language detection and fallback settings. Set up translation file structure (locales/en.json, locales/es.json, etc.). Configure namespace separation for different app sections. Implement language persistence using AsyncStorage. Create translation helper hooks for components.",
+            "status": "pending",
+            "testStrategy": "Verify i18n initializes correctly, language detection works, translations load without errors, fallback language works"
+          },
+          {
+            "id": 2,
+            "title": "Create Settings Screen UI",
+            "description": "Build the settings screen with all preference controls and proper navigation",
+            "dependencies": [
+              1
+            ],
+            "details": "Create SettingsScreen.tsx with section-based layout (Account, Preferences, Notifications, About). Implement language picker using native picker or custom modal with language names in their native script. Add notification toggle switch with explanation text. Create content filtering options with multi-select for joke categories. Add app version, privacy policy, and terms of service links. Ensure proper styling that matches app theme.",
+            "status": "pending",
+            "testStrategy": "Test all UI elements render correctly, navigation works, settings sections are properly organized, UI is responsive"
+          },
+          {
+            "id": 3,
+            "title": "Implement Preference Storage and State Management",
+            "description": "Create preference storage system with SQLite and state management for app-wide access",
+            "dependencies": [
+              2
+            ],
+            "details": "Create PreferencesService class to handle all preference CRUD operations with SQLite. Implement React Context or Redux for global preference state management. Create hooks for accessing and updating preferences (useLanguage, useNotificationSettings, etc.). Ensure preferences load on app start and update UI reactively. Add migration logic for preference schema changes. Implement preference export/import functionality.",
+            "status": "pending",
+            "testStrategy": "Test preferences persist across app restarts, state updates propagate correctly, migrations work, default values apply"
+          },
+          {
+            "id": 4,
+            "title": "Build First-Launch Onboarding Flow",
+            "description": "Create onboarding screens for new users to set initial preferences quickly",
+            "dependencies": [
+              3
+            ],
+            "details": "Create OnboardingScreen with swipeable pages using PagerView or similar. Design welcome screen explaining app concept. Add language selection screen with auto-detection and manual override. Create joke category preference screen with visual category cards. Add optional notification opt-in screen. Implement skip option and progress indicators. Store onboarding completion flag to show only once.",
+            "status": "pending",
+            "testStrategy": "Test onboarding shows only on first launch, all selections save correctly, skip functionality works, progress tracking accurate"
+          },
+          {
+            "id": 5,
+            "title": "Add Language Quick-Switch Component",
+            "description": "Implement language chip in navigation bar for quick language switching",
+            "dependencies": [
+              3
+            ],
+            "details": "Create LanguageChip component showing current language code/flag. Add to top navigation bar across all screens. Implement dropdown or modal for quick language switching without entering settings. Update all screens immediately when language changes. Add subtle animation for language change feedback. Ensure chip doesn't interfere with navigation gestures. Cache frequently used languages for quick access.",
+            "status": "pending",
+            "testStrategy": "Test language switches immediately update all UI text, chip appears consistently, quick switch works smoothly"
+          }
+        ]
       },
       {
         "id": 6,
@@ -198,7 +306,7 @@
         "testStrategy": "Test API endpoints respond correctly, JWT tokens work, rate limiting blocks excessive requests, CORS allows mobile app access, error handling returns proper status codes",
         "priority": "high",
         "dependencies": [],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -228,7 +336,7 @@
               1
             ],
             "details": "Install and configure slowapi with Redis or in-memory backend. Create rate limiting middleware in middleware/rate_limit.py. Configure different rate limits for different endpoints (e.g., 100 requests/hour for jokes, 10 requests/hour for feedback). Add rate limit headers to responses. Handle rate limit exceeded responses with proper HTTP status codes.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test rate limiting by making multiple rapid requests and verifying limits are enforced"
           },
           {
@@ -240,7 +348,7 @@
               3
             ],
             "details": "Create Pydantic models in models/ for request/response schemas (JokeRequest, FeedbackRequest, HistoryResponse). Implement POST /next_joke endpoint with joke generation logic. Create POST /feedback endpoint to store user feedback. Implement GET /history endpoint to retrieve user's joke history. Add proper error handling and HTTP status codes. Ensure all endpoints require JWT authentication.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test each endpoint with valid/invalid payloads and verify authentication requirements"
           },
           {
@@ -251,7 +359,7 @@
               4
             ],
             "details": "Configure CORS middleware to allow mobile app origins. Setup structured logging with appropriate log levels and formats. Create .env.example file with all required environment variables. Add comprehensive error handling and logging throughout the application. Configure production-ready settings for deployment. Add health check endpoint for monitoring.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test CORS functionality from mobile app, verify logging output, and test all environment configurations"
           }
         ]
@@ -267,7 +375,61 @@
           7
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install PostgreSQL and SQLAlchemy Dependencies",
+            "description": "Set up PostgreSQL database and install required Python packages for async database operations",
+            "dependencies": [],
+            "details": "Install PostgreSQL locally or provision cloud instance (AWS RDS, Supabase, etc.). Install Python packages: sqlalchemy[asyncio], asyncpg, alembic, psycopg2-binary. Create database and user with proper permissions. Configure connection string in environment variables. Set up database connection testing script. Document database setup process for team members.",
+            "status": "pending",
+            "testStrategy": "Test database connection works, verify async SQLAlchemy connects successfully, ensure proper permissions"
+          },
+          {
+            "id": 2,
+            "title": "Define SQLAlchemy Models and Relationships",
+            "description": "Create all database models with proper relationships, constraints, and data types",
+            "dependencies": [
+              1
+            ],
+            "details": "Create models/base.py with declarative base and common mixins (timestamps, id). Define models: Joke (id, text, language, created_at, creator_id, is_flagged), Tag (id, name, category), JokeTag (joke_id, tag_id), User (id, device_uuid, created_at), UserTagScore (user_id, tag_id, score, sample_count), UserJokeFeedback (id, user_id, joke_id, sentiment, created_at), SeenJoke (user_id, joke_id, created_at). Add proper foreign keys, unique constraints, and cascade rules. Create composite indexes for common queries.",
+            "status": "pending",
+            "testStrategy": "Verify models compile without errors, relationships work bidirectionally, constraints enforce data integrity"
+          },
+          {
+            "id": 3,
+            "title": "Configure Alembic and Create Initial Migration",
+            "description": "Set up Alembic for database version control and create the initial schema migration",
+            "dependencies": [
+              2
+            ],
+            "details": "Initialize Alembic with 'alembic init alembic'. Configure alembic.ini with database URL from environment. Update env.py to use async migrations and import all models. Create initial migration with 'alembic revision --autogenerate'. Review and adjust generated migration for indexes and constraints. Add seed data migration for initial tags and sample jokes. Create migration testing workflow.",
+            "status": "pending",
+            "testStrategy": "Test migrations run up and down successfully, verify schema matches models, test on fresh database"
+          },
+          {
+            "id": 4,
+            "title": "Implement Async Database Session Management",
+            "description": "Create database connection pooling and session management for FastAPI integration",
+            "dependencies": [
+              3
+            ],
+            "details": "Create database/session.py with async engine using create_async_engine. Configure connection pool settings (pool_size, max_overflow, pool_timeout). Implement async session factory using async_sessionmaker. Create dependency injection function for FastAPI routes. Add database health check endpoint. Implement proper session cleanup and error handling. Configure query logging for development.",
+            "status": "pending",
+            "testStrategy": "Test connection pooling under load, verify sessions close properly, test transaction rollback on errors"
+          },
+          {
+            "id": 5,
+            "title": "Create Database Repository Layer",
+            "description": "Build repository classes with common database operations for each model",
+            "dependencies": [
+              4
+            ],
+            "details": "Create base repository class with generic CRUD operations. Implement specific repositories: JokeRepository (get_random_unseen, get_by_tags, mark_as_seen), UserRepository (get_or_create_by_device_uuid, update_preferences), TagRepository (get_all_by_category, get_popular), FeedbackRepository (record_feedback, get_user_sentiment_stats). Add methods for bulk operations and complex queries. Implement query optimization with eager loading where needed. Add comprehensive error handling and logging.",
+            "status": "pending",
+            "testStrategy": "Unit test each repository method, test concurrent operations, verify query performance, test error scenarios"
+          }
+        ]
       },
       {
         "id": 9,
@@ -328,7 +490,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T15:22:16.429Z",
-      "updated": "2025-07-11T13:44:37.171Z",
+      "updated": "2025-07-11T14:10:24.550Z",
       "description": "Tasks for master context"
     }
   }
