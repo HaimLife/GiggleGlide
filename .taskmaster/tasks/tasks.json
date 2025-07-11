@@ -164,7 +164,7 @@
               1
             ],
             "details": "Create JokeCard.tsx component with card-style design. Implement responsive sizing that works on different screen sizes. Add proper typography with adjustable font sizes for joke text. Create card shadow/elevation effects. Ensure proper padding and margins for one-handed operation. Add placeholder loading state and error boundary.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test component renders correctly on different screen sizes, text is readable, loading states work properly"
           },
           {
@@ -246,7 +246,7 @@
               1
             ],
             "details": "Create SettingsScreen.tsx with section-based layout (Account, Preferences, Notifications, About). Implement language picker using native picker or custom modal with language names in their native script. Add notification toggle switch with explanation text. Create content filtering options with multi-select for joke categories. Add app version, privacy policy, and terms of service links. Ensure proper styling that matches app theme.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test all UI elements render correctly, navigation works, settings sections are properly organized, UI is responsive"
           },
           {
@@ -393,7 +393,7 @@
               1
             ],
             "details": "Create models/base.py with declarative base and common mixins (timestamps, id). Define models: Joke (id, text, language, created_at, creator_id, is_flagged), Tag (id, name, category), JokeTag (joke_id, tag_id), User (id, device_uuid, created_at), UserTagScore (user_id, tag_id, score, sample_count), UserJokeFeedback (id, user_id, joke_id, sentiment, created_at), SeenJoke (user_id, joke_id, created_at). Add proper foreign keys, unique constraints, and cascade rules. Create composite indexes for common queries.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Verify models compile without errors, relationships work bidirectionally, constraints enforce data integrity"
           },
           {
@@ -490,7 +490,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T15:22:16.429Z",
-      "updated": "2025-07-11T14:24:37.990Z",
+      "updated": "2025-07-11T14:29:57.545Z",
       "description": "Tasks for master context"
     }
   }

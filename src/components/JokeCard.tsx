@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Animated,
   PanResponder,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -23,6 +24,37 @@ interface JokeCardProps {
   onSwipeLeft: (id: string) => void;
   onSwipeRight: (id: string) => void;
   isActive: boolean;
+  isLoading?: boolean;
+  error?: string | null;
+}
+
+// Error boundary component for card-level error handling
+export class JokeCardErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Something went wrong with this joke!</Text>
+          <Text style={styles.errorSubtext}>
+            {this.state.error?.message || 'Please try again'}
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 const JokeCard: React.FC<JokeCardProps> = ({
@@ -30,6 +62,8 @@ const JokeCard: React.FC<JokeCardProps> = ({
   onSwipeLeft,
   onSwipeRight,
   isActive,
+  isLoading = false,
+  error = null,
 }) => {
   const position = useRef(new Animated.ValueXY()).current;
   const rotateValue = useRef(new Animated.Value(0)).current;
@@ -126,6 +160,27 @@ const JokeCard: React.FC<JokeCardProps> = ({
     opacity: nextCardOpacity,
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={[styles.card, styles.loadingCard]}>
+        <ActivityIndicator size="large" color="#667eea" />
+        <Text style={styles.loadingText}>Loading joke...</Text>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <View style={[styles.card, styles.errorCard]}>
+        <Text style={styles.errorIcon}>😕</Text>
+        <Text style={styles.errorText}>Oops! Something went wrong</Text>
+        <Text style={styles.errorSubtext}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <Animated.View
       style={[
@@ -144,7 +199,13 @@ const JokeCard: React.FC<JokeCardProps> = ({
         {joke.category && (
           <Text style={styles.category}>{joke.category.toUpperCase()}</Text>
         )}
-        <Text style={styles.jokeText}>{joke.text}</Text>
+        <Text
+          style={styles.jokeText}
+          adjustsFontSizeToFit
+          numberOfLines={8}
+        >
+          {joke.text}
+        </Text>
 
         <Animated.View
           style={[styles.likeContainer, { opacity: likeOpacity }]}
@@ -163,6 +224,47 @@ const JokeCard: React.FC<JokeCardProps> = ({
 };
 
 const styles = StyleSheet.create({
+  loadingCard: {
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#667eea',
+    fontWeight: '500',
+  },
+  errorCard: {
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 20,
+    borderRadius: 20,
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
   card: {
     position: 'absolute',
     width: screenWidth * 0.9,
@@ -203,6 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 36,
     paddingHorizontal: 20,
+    maxHeight: screenHeight * 0.5,
   },
   likeContainer: {
     position: 'absolute',
