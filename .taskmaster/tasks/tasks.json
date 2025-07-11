@@ -118,7 +118,7 @@
               3
             ],
             "details": "Create repository classes or modules for each table with full CRUD operations. Implement prepared statements for all database operations to prevent SQL injection. Create functions for: inserting/updating/deleting jokes, managing user preferences, recording joke feedback and views, managing favorites. Include batch operations for bulk inserts and transactions for atomic operations. Add proper error handling and logging for all database operations.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Unit tests for each CRUD operation, test with various data types and edge cases, verify prepared statements prevent SQL injection"
           },
           {
@@ -228,7 +228,7 @@
               1
             ],
             "details": "Install and configure slowapi with Redis or in-memory backend. Create rate limiting middleware in middleware/rate_limit.py. Configure different rate limits for different endpoints (e.g., 100 requests/hour for jokes, 10 requests/hour for feedback). Add rate limit headers to responses. Handle rate limit exceeded responses with proper HTTP status codes.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test rate limiting by making multiple rapid requests and verifying limits are enforced"
           },
           {
@@ -328,7 +328,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T15:22:16.429Z",
-      "updated": "2025-07-11T13:38:38.711Z",
+      "updated": "2025-07-11T13:44:37.171Z",
       "description": "Tasks for master context"
     }
   }
