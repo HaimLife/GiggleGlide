@@ -7,6 +7,9 @@ import {
   Animated,
   Platform,
   ActivityIndicator,
+  TouchableOpacity,
+  AccessibilityInfo,
+  findNodeHandle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -37,10 +40,10 @@ const SWIPE_VELOCITY_THRESHOLD = 800;
 const VERTICAL_SWIPE_THRESHOLD = screenHeight * 0.2;
 const ROTATION_MULTIPLIER = 0.03;
 const HAPTIC_THRESHOLD = screenWidth * 0.1;
+const PULL_TO_REFRESH_THRESHOLD = screenHeight * 0.15;
+const PULL_TO_REFRESH_VELOCITY_THRESHOLD = 600;
 
-const AnimatedView = ReAnimated.default?.createAnimatedComponent ? 
-  ReAnimated.default.createAnimatedComponent(View) : 
-  ReAnimated.createAnimatedComponent ? ReAnimated.createAnimatedComponent(View) : View;
+const AnimatedView = ReAnimated.createAnimatedComponent(View);
 
 interface JokeCardProps {
   joke: {
@@ -51,9 +54,12 @@ interface JokeCardProps {
   onSwipeLeft: (id: string) => void;
   onSwipeRight: (id: string) => void;
   onSwipeUp?: (id: string) => void;
+  onPullToRefresh?: () => void;
   isActive: boolean;
   isLoading?: boolean;
   error?: string | null;
+  showHints?: boolean;
+  reducedMotion?: boolean;
 }
 
 // Error boundary component for card-level error handling
@@ -90,14 +96,29 @@ const JokeCard: React.FC<JokeCardProps> = ({
   onSwipeLeft,
   onSwipeRight,
   onSwipeUp,
+  onPullToRefresh,
   isActive,
   isLoading = false,
   error = null,
+  showHints = false,
+  reducedMotion = false,
 }) => {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const hasTriggeredHaptic = useSharedValue(false);
+  const pullToRefreshProgress = useSharedValue(0);
+  const cardRef = useRef<View>(null);
+  const [isScreenReaderEnabled, setIsScreenReaderEnabled] = useState(false);
+  
+  useEffect(() => {
+    AccessibilityInfo.isScreenReaderEnabled().then(setIsScreenReaderEnabled);
+    const subscription = AccessibilityInfo.addEventListener(
+      'screenReaderChanged',
+      setIsScreenReaderEnabled
+    );
+    return () => subscription?.remove();
+  }, []);
 
   const triggerHaptic = (intensity: 'Light' | 'Medium' | 'Heavy' = 'Light') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle[intensity]);
@@ -120,6 +141,61 @@ const JokeCard: React.FC<JokeCardProps> = ({
     }
   };
 
+  const handlePullToRefresh = () => {
+    'worklet';
+    if (onPullToRefresh) {
+      runOnJS(onPullToRefresh)();
+    }
+  };
+
+  const announceAction = (action: string) => {
+    if (isScreenReaderEnabled) {
+      AccessibilityInfo.announceForAccessibility(`${action} joke: ${joke.text.substring(0, 50)}...`);
+    }
+  };
+
+  const handleAccessibilityAction = (actionName: string) => {
+    switch (actionName) {
+      case 'like':
+        announceAction('Liked');
+        onSwipeRight(joke.id);
+        break;
+      case 'dislike':
+        announceAction('Disliked');
+        onSwipeLeft(joke.id);
+        break;
+      case 'neutral':
+        if (onSwipeUp) {
+          announceAction('Marked as neutral');
+          onSwipeUp(joke.id);
+        }
+        break;
+      case 'refresh':
+        if (onPullToRefresh) {
+          announceAction('Refreshing');
+          onPullToRefresh();
+        }
+        break;
+    }
+  };
+
+  const focusCard = () => {
+    if (cardRef.current && isScreenReaderEnabled) {
+      const reactTag = findNodeHandle(cardRef.current);
+      if (reactTag) {
+        AccessibilityInfo.setAccessibilityFocus(reactTag);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isActive && isScreenReaderEnabled) {
+      // Small delay to ensure the card is rendered
+      const timer = setTimeout(focusCard, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isActive, isScreenReaderEnabled]);
+
   const gestureHandler = useAnimatedGestureHandler<
     PanGestureHandlerGestureEvent,
     { startX: number; startY: number }
@@ -133,24 +209,40 @@ const JokeCard: React.FC<JokeCardProps> = ({
       translateX.value = ctx.startX + event.translationX;
       translateY.value = ctx.startY + event.translationY;
       
+      // Update pull-to-refresh progress for downward swipes
+      if (translateY.value > 0) {
+        pullToRefreshProgress.value = interpolate(
+          translateY.value,
+          [0, PULL_TO_REFRESH_THRESHOLD],
+          [0, 1],
+          Extrapolate.CLAMP
+        );
+      } else {
+        pullToRefreshProgress.value = 0;
+      }
+      
       // Trigger haptic feedback when crossing threshold
       const absX = Math.abs(translateX.value);
       const absY = Math.abs(translateY.value);
       
       if (!hasTriggeredHaptic.value && 
-          (absX > HAPTIC_THRESHOLD || (absY > HAPTIC_THRESHOLD && translateY.value < 0))) {
+          (absX > HAPTIC_THRESHOLD || 
+           (absY > HAPTIC_THRESHOLD && translateY.value < 0) ||
+           (translateY.value > HAPTIC_THRESHOLD && onPullToRefresh))) {
         hasTriggeredHaptic.value = true;
         runOnJS(triggerHaptic)('Light');
       }
       
-      // Scale animation based on distance
-      const distance = Math.sqrt(translateX.value ** 2 + translateY.value ** 2);
-      scale.value = interpolate(
-        distance,
-        [0, screenWidth / 2],
-        [1, 0.9],
-        Extrapolate.CLAMP
-      );
+      // Scale animation based on distance (respect reduced motion)
+      if (!reducedMotion) {
+        const distance = Math.sqrt(translateX.value ** 2 + translateY.value ** 2);
+        scale.value = interpolate(
+          distance,
+          [0, screenWidth / 2],
+          [1, 0.9],
+          Extrapolate.CLAMP
+        );
+      }
     },
     onEnd: (event) => {
       if (!isActive) return;
@@ -160,6 +252,24 @@ const JokeCard: React.FC<JokeCardProps> = ({
       const translationX = event.translationX;
       const translationY = event.translationY;
 
+      // Check for pull-to-refresh (downward swipe)
+      if (
+        onPullToRefresh &&
+        Math.abs(translationY) > Math.abs(translationX) &&
+        translationY > PULL_TO_REFRESH_THRESHOLD &&
+        velocityY > PULL_TO_REFRESH_VELOCITY_THRESHOLD
+      ) {
+        runOnJS(triggerHaptic)('Medium');
+        handlePullToRefresh();
+        // Spring back animation
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        scale.value = withSpring(1);
+        pullToRefreshProgress.value = withTiming(0);
+        hasTriggeredHaptic.value = false;
+        return;
+      }
+
       // Check for upward swipe (neutral)
       if (
         Math.abs(translationY) > Math.abs(translationX) &&
@@ -167,7 +277,8 @@ const JokeCard: React.FC<JokeCardProps> = ({
         velocityY < -SWIPE_VELOCITY_THRESHOLD
       ) {
         runOnJS(triggerHaptic)('Medium');
-        translateY.value = withTiming(-screenHeight, { duration: SWIPE_OUT_DURATION }, () => {
+        const duration = reducedMotion ? 100 : SWIPE_OUT_DURATION;
+        translateY.value = withTiming(-screenHeight, { duration }, () => {
           handleSwipeUp();
           translateX.value = 0;
           translateY.value = 0;
@@ -182,7 +293,8 @@ const JokeCard: React.FC<JokeCardProps> = ({
         (translationX > screenWidth * 0.1 && velocityX > SWIPE_VELOCITY_THRESHOLD)
       ) {
         runOnJS(triggerHaptic)('Medium');
-        translateX.value = withTiming(screenWidth + 100, { duration: SWIPE_OUT_DURATION }, () => {
+        const duration = reducedMotion ? 100 : SWIPE_OUT_DURATION;
+        translateX.value = withTiming(screenWidth + 100, { duration }, () => {
           handleSwipeRight();
           translateX.value = 0;
           translateY.value = 0;
@@ -197,7 +309,8 @@ const JokeCard: React.FC<JokeCardProps> = ({
         (translationX < -screenWidth * 0.1 && velocityX < -SWIPE_VELOCITY_THRESHOLD)
       ) {
         runOnJS(triggerHaptic)('Medium');
-        translateX.value = withTiming(-screenWidth - 100, { duration: SWIPE_OUT_DURATION }, () => {
+        const duration = reducedMotion ? 100 : SWIPE_OUT_DURATION;
+        translateX.value = withTiming(-screenWidth - 100, { duration }, () => {
           handleSwipeLeft();
           translateX.value = 0;
           translateY.value = 0;
@@ -207,17 +320,14 @@ const JokeCard: React.FC<JokeCardProps> = ({
       }
 
       // Spring back to center with haptic feedback
-      translateX.value = withSpring(0, {
-        damping: 15,
-        stiffness: 100,
-        mass: 1,
-      });
-      translateY.value = withSpring(0, {
-        damping: 15,
-        stiffness: 100,
-        mass: 1,
-      });
-      scale.value = withSpring(1);
+      const springConfig = reducedMotion ? 
+        { damping: 25, stiffness: 200, mass: 1 } : 
+        { damping: 15, stiffness: 100, mass: 1 };
+        
+      translateX.value = withSpring(0, springConfig);
+      translateY.value = withSpring(0, springConfig);
+      scale.value = withSpring(1, springConfig);
+      pullToRefreshProgress.value = withTiming(0);
       hasTriggeredHaptic.value = false;
       runOnJS(triggerHaptic)('Light');
     },
@@ -225,7 +335,7 @@ const JokeCard: React.FC<JokeCardProps> = ({
 
   const cardStyle = useAnimatedStyle(() => {
     'worklet';
-    const rotate = translateX.value * ROTATION_MULTIPLIER;
+    const rotate = reducedMotion ? 0 : translateX.value * ROTATION_MULTIPLIER;
 
     return {
       transform: [
@@ -235,7 +345,7 @@ const JokeCard: React.FC<JokeCardProps> = ({
         { scale: scale.value },
       ],
     };
-  }, []);
+  }, [reducedMotion]);
 
   // Animated overlay style with color transitions
   const overlayStyle = useAnimatedStyle(() => {
@@ -329,10 +439,39 @@ const JokeCard: React.FC<JokeCardProps> = ({
     };
   }, []);
 
+  // Pull-to-refresh indicator style
+  const pullToRefreshStyle = useAnimatedStyle(() => {
+    'worklet';
+    const opacity = interpolate(
+      pullToRefreshProgress.value,
+      [0, 0.5, 1],
+      [0, 0.5, 1],
+      Extrapolate.CLAMP
+    );
+    
+    const scale = interpolate(
+      pullToRefreshProgress.value,
+      [0, 1],
+      [0.8, 1.2],
+      Extrapolate.CLAMP
+    );
+
+    return {
+      opacity,
+      transform: [{ scale: reducedMotion ? 1 : scale }],
+    };
+  }, [reducedMotion]);
+
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.card, styles.loadingCard]}>
+      <View 
+        style={[styles.card, styles.loadingCard]}
+        accessible={true}
+        accessibilityRole="text"
+        accessibilityLabel="Loading a new joke, please wait"
+        accessibilityState={{ busy: true }}
+      >
         <ActivityIndicator size="large" color="#667eea" />
         <Text style={styles.loadingText}>Loading joke...</Text>
       </View>
@@ -342,8 +481,13 @@ const JokeCard: React.FC<JokeCardProps> = ({
   // Error state
   if (error) {
     return (
-      <View style={[styles.card, styles.errorCard]}>
-        <Text style={styles.errorIcon}>😕</Text>
+      <View 
+        style={[styles.card, styles.errorCard]}
+        accessible={true}
+        accessibilityRole="alert"
+        accessibilityLabel={`Error occurred: ${error}. Please try again.`}
+      >
+        <Text style={styles.errorIcon} accessible={false}>😕</Text>
         <Text style={styles.errorText}>Oops! Something went wrong</Text>
         <Text style={styles.errorSubtext}>{error}</Text>
       </View>
@@ -351,66 +495,169 @@ const JokeCard: React.FC<JokeCardProps> = ({
   }
 
   return (
-    <PanGestureHandler onGestureEvent={gestureHandler} enabled={isActive} testID="pan-gesture-handler">
-      <AnimatedView
-        testID="joke-card"
-        style={[
-          styles.card,
-          cardStyle,
-          !isActive && styles.inactiveCard,
-        ]}
-      >
-        <LinearGradient
-          colors={['#667eea', '#764ba2']}
-          style={styles.gradient}
+    <View style={styles.container}>
+      <PanGestureHandler onGestureEvent={gestureHandler} enabled={isActive && !isScreenReaderEnabled} testID="pan-gesture-handler">
+        <AnimatedView
+          ref={cardRef}
+          testID="joke-card"
+          style={[
+            styles.card,
+            cardStyle,
+            !isActive && styles.inactiveCard,
+          ]}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Joke: ${joke.text}${joke.category ? `. Category: ${joke.category}` : ''}. ${isActive ? 'Swipe right to like, left to dislike, up for neutral' : 'Inactive joke card'}`}
+          accessibilityHint={isActive ? "Double tap to hear options, or use swipe gestures" : undefined}
+          accessibilityActions={isActive ? [
+            { name: 'like', label: 'Like this joke' },
+            { name: 'dislike', label: 'Dislike this joke' },
+            ...(onSwipeUp ? [{ name: 'neutral', label: 'Mark as neutral' }] : []),
+            ...(onPullToRefresh ? [{ name: 'refresh', label: 'Get new joke' }] : []),
+          ] : []}
+          onAccessibilityAction={(event: any) => {
+            handleAccessibilityAction(event.nativeEvent.actionName);
+          }}
         >
-          {joke.category && (
-            <Text style={styles.category}>{joke.category.toUpperCase()}</Text>
-          )}
-          <Text
-            style={styles.jokeText}
-            adjustsFontSizeToFit
-            numberOfLines={8}
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            style={styles.gradient}
           >
-            {joke.text}
-          </Text>
+            {joke.category && (
+              <Text 
+                style={styles.category}
+                accessible={false}
+              >
+                {joke.category.toUpperCase()}
+              </Text>
+            )}
+            <Text
+              style={styles.jokeText}
+              adjustsFontSizeToFit
+              numberOfLines={8}
+              accessible={false}
+            >
+              {joke.text}
+            </Text>
 
-          {/* Animated color overlay */}
-          <AnimatedView style={[styles.overlay, overlayStyle]} pointerEvents="none" />
+            {/* Animated color overlay */}
+            <AnimatedView style={[styles.overlay, overlayStyle]} pointerEvents="none" accessible={false} />
+            
+            <AnimatedView
+              style={[styles.likeContainer, likeOpacityStyle]}
+              pointerEvents="none"
+              accessible={false}
+            >
+              <View style={styles.labelWrapper}>
+                <Text style={styles.likeText}>LIKE</Text>
+              </View>
+            </AnimatedView>
+
+            <AnimatedView
+              style={[styles.nopeContainer, nopeOpacityStyle]}
+              pointerEvents="none"
+              accessible={false}
+            >
+              <View style={styles.labelWrapper}>
+                <Text style={styles.nopeText}>NOPE</Text>
+              </View>
+            </AnimatedView>
+
+            <AnimatedView
+              style={[styles.neutralContainer, neutralOpacityStyle]}
+              pointerEvents="none"
+              accessible={false}
+            >
+              <View style={styles.labelWrapper}>
+                <Text style={styles.neutralText}>NEUTRAL</Text>
+              </View>
+            </AnimatedView>
+
+            {/* Pull-to-refresh indicator */}
+            {onPullToRefresh && (
+              <AnimatedView
+                style={[styles.pullToRefreshContainer, pullToRefreshStyle]}
+                pointerEvents="none"
+                accessible={false}
+              >
+                <Text style={styles.pullToRefreshText}>↓ Pull for new joke</Text>
+              </AnimatedView>
+            )}
+
+            {/* Gesture hints for first-time users */}
+            {showHints && (
+              <View style={styles.hintsContainer} accessible={false}>
+                <Text style={styles.hintText}>← Dislike</Text>
+                <Text style={styles.hintText}>Like →</Text>
+                <Text style={styles.hintText}>↑ Neutral</Text>
+                {onPullToRefresh && <Text style={styles.hintText}>↓ New joke</Text>}
+              </View>
+            )}
+          </LinearGradient>
+        </AnimatedView>
+      </PanGestureHandler>
+
+      {/* Accessibility action buttons */}
+      {(isActive && isScreenReaderEnabled) && (
+        <View style={styles.accessibilityButtonsContainer}>
+          <TouchableOpacity
+            style={[styles.accessibilityButton, styles.dislikeButton]}
+            onPress={() => handleAccessibilityAction('dislike')}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Dislike this joke"
+            accessibilityHint="Marks this joke as disliked and shows the next one"
+          >
+            <Text style={styles.accessibilityButtonText}>👎 Dislike</Text>
+          </TouchableOpacity>
           
-          <AnimatedView
-            style={[styles.likeContainer, likeOpacityStyle]}
-            pointerEvents="none"
+          {onSwipeUp && (
+            <TouchableOpacity
+              style={[styles.accessibilityButton, styles.neutralButton]}
+              onPress={() => handleAccessibilityAction('neutral')}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Mark joke as neutral"
+              accessibilityHint="Marks this joke as neutral and shows the next one"
+            >
+              <Text style={styles.accessibilityButtonText}>➖ Neutral</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            style={[styles.accessibilityButton, styles.likeButton]}
+            onPress={() => handleAccessibilityAction('like')}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Like this joke"
+            accessibilityHint="Marks this joke as liked and shows the next one"
           >
-            <View style={styles.labelWrapper}>
-              <Text style={styles.likeText}>LIKE</Text>
-            </View>
-          </AnimatedView>
-
-          <AnimatedView
-            style={[styles.nopeContainer, nopeOpacityStyle]}
-            pointerEvents="none"
-          >
-            <View style={styles.labelWrapper}>
-              <Text style={styles.nopeText}>NOPE</Text>
-            </View>
-          </AnimatedView>
-
-          <AnimatedView
-            style={[styles.neutralContainer, neutralOpacityStyle]}
-            pointerEvents="none"
-          >
-            <View style={styles.labelWrapper}>
-              <Text style={styles.neutralText}>NEUTRAL</Text>
-            </View>
-          </AnimatedView>
-        </LinearGradient>
-      </AnimatedView>
-    </PanGestureHandler>
+            <Text style={styles.accessibilityButtonText}>👍 Like</Text>
+          </TouchableOpacity>
+          
+          {onPullToRefresh && (
+            <TouchableOpacity
+              style={[styles.accessibilityButton, styles.refreshButton]}
+              onPress={() => handleAccessibilityAction('refresh')}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Get a new joke"
+              accessibilityHint="Loads a completely new joke"
+            >
+              <Text style={styles.accessibilityButtonText}>🔄 New Joke</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+  },
   loadingCard: {
     backgroundColor: '#fff',
     justifyContent: 'center',
@@ -550,6 +797,128 @@ const styles = StyleSheet.create({
   inactiveCard: {
     transform: [{ scale: 0.8 }],
   },
+  pullToRefreshContainer: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  pullToRefreshText: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  hintsContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  hintText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  accessibilityButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  accessibilityButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    minWidth: 100,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  dislikeButton: {
+    backgroundColor: '#F44336',
+  },
+  neutralButton: {
+    backgroundColor: '#9E9E9E',
+  },
+  likeButton: {
+    backgroundColor: '#4CAF50',
+  },
+  refreshButton: {
+    backgroundColor: '#2196F3',
+  },
+  accessibilityButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
 
 export default JokeCard;
+
+// Helper component for gesture hints
+export const GestureHints: React.FC<{ visible: boolean; onPullToRefresh?: boolean }> = ({ visible, onPullToRefresh }) => {
+  if (!visible) return null;
+  
+  return (
+    <View style={hintsOverlayStyles.container} pointerEvents="none">
+      <Text style={hintsOverlayStyles.hint}>← Swipe left to dislike</Text>
+      <Text style={hintsOverlayStyles.hint}>Swipe right to like →</Text>
+      <Text style={hintsOverlayStyles.hint}>↑ Swipe up for neutral</Text>
+      {onPullToRefresh && (
+        <Text style={hintsOverlayStyles.hint}>↓ Pull down for new joke</Text>
+      )}
+    </View>
+  );
+};
+
+const hintsOverlayStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 1000,
+  },
+  hint: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginVertical: 8,
+    paddingHorizontal: 20,
+  },
+});
