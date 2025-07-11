@@ -45,11 +45,12 @@ const PULL_TO_REFRESH_VELOCITY_THRESHOLD = 600;
 
 const AnimatedView = ReAnimated.createAnimatedComponent(View);
 
+import { Joke } from '../services/database/types';
+import { JokeFormatter } from '../utils/jokeFormatting';
+
 interface JokeCardProps {
-  joke: {
-    id: string;
-    text: string;
-    category?: string;
+  joke: Joke & {
+    id: string; // Ensure id is always string for compatibility
   };
   onSwipeLeft: (id: string) => void;
   onSwipeRight: (id: string) => void;
@@ -150,7 +151,7 @@ const JokeCard: React.FC<JokeCardProps> = ({
 
   const announceAction = (action: string) => {
     if (isScreenReaderEnabled) {
-      AccessibilityInfo.announceForAccessibility(`${action} joke: ${joke.text.substring(0, 50)}...`);
+      AccessibilityInfo.announceForAccessibility(`${action} joke: ${joke.txt.substring(0, 50)}...`);
     }
   };
 
@@ -507,7 +508,7 @@ const JokeCard: React.FC<JokeCardProps> = ({
           ]}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel={`Joke: ${joke.text}${joke.category ? `. Category: ${joke.category}` : ''}. ${isActive ? 'Swipe right to like, left to dislike, up for neutral' : 'Inactive joke card'}`}
+          accessibilityLabel={`Joke: ${joke.txt}${joke.topic ? `. Topic: ${joke.topic}` : ''}${joke.style ? `. Style: ${joke.style}` : ''}. ${isActive ? 'Swipe right to like, left to dislike, up for neutral' : 'Inactive joke card'}`}
           accessibilityHint={isActive ? "Double tap to hear options, or use swipe gestures" : undefined}
           accessibilityActions={isActive ? [
             { name: 'like', label: 'Like this joke' },
@@ -523,21 +524,37 @@ const JokeCard: React.FC<JokeCardProps> = ({
             colors={['#667eea', '#764ba2']}
             style={styles.gradient}
           >
-            {joke.category && (
-              <Text 
-                style={styles.category}
-                accessible={false}
-              >
-                {joke.category.toUpperCase()}
-              </Text>
-            )}
+            {/* Joke metadata display */}
+            <View style={styles.metadataContainer}>
+              {joke.style && (
+                <Text style={styles.metadataTag}>
+                  {joke.style.toUpperCase()}
+                </Text>
+              )}
+              {joke.topic && joke.topic !== 'general' && (
+                <Text style={styles.metadataTag}>
+                  {joke.topic.toUpperCase()}
+                </Text>
+              )}
+              {joke.tone && (
+                <Text style={styles.metadataTag}>
+                  {joke.tone.toUpperCase()}
+                </Text>
+              )}
+            </View>
+
             <Text
-              style={styles.jokeText}
+              style={[
+                styles.jokeText,
+                joke.format === 'dialogue' && styles.dialogueText,
+                joke.format === 'qa' && styles.qaText,
+                joke.format === 'list' && styles.listText
+              ]}
               adjustsFontSizeToFit
-              numberOfLines={8}
+              numberOfLines={joke.format === 'story' ? 12 : 8}
               accessible={false}
             >
-              {joke.text}
+              {JokeFormatter.formatForContext(joke, 'card')}
             </Text>
 
             {/* Animated color overlay */}
@@ -724,13 +741,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  category: {
+  metadataContainer: {
     position: 'absolute',
-    top: 20,
-    fontSize: 14,
+    top: 15,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  metadataTag: {
+    fontSize: 11,
     fontWeight: 'bold',
-    color: 'rgba(255, 255, 255, 0.7)',
-    letterSpacing: 2,
+    color: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    letterSpacing: 1,
+    textAlign: 'center',
   },
   jokeText: {
     fontSize: 24,
@@ -740,6 +770,21 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     paddingHorizontal: 20,
     maxHeight: screenHeight * 0.5,
+  },
+  dialogueText: {
+    textAlign: 'left',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 20,
+    lineHeight: 30,
+  },
+  qaText: {
+    fontSize: 22,
+    lineHeight: 34,
+  },
+  listText: {
+    textAlign: 'left',
+    fontSize: 20,
+    lineHeight: 32,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

@@ -12,10 +12,18 @@ export const SCHEMA_STATEMENTS = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     txt TEXT NOT NULL,
     lang TEXT DEFAULT 'en',
+    style TEXT DEFAULT 'general',
+    format TEXT DEFAULT 'text',
+    topic TEXT DEFAULT 'general',
+    tone TEXT DEFAULT 'light',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     creator TEXT,
     is_flagged INTEGER DEFAULT 0,
-    CHECK (is_flagged IN (0, 1))
+    CHECK (is_flagged IN (0, 1)),
+    CHECK (style IN ('general', 'dad', 'pun', 'observational', 'dark', 'wordplay', 'knock-knock', 'oneliners')),
+    CHECK (format IN ('text', 'qa', 'dialogue', 'story', 'list')),
+    CHECK (topic IN ('general', 'animals', 'food', 'technology', 'work', 'family', 'travel', 'sports', 'science', 'everyday')),
+    CHECK (tone IN ('light', 'silly', 'clever', 'witty', 'absurd', 'family-friendly'))
   )`,
 
   // User preferences table
@@ -61,6 +69,12 @@ export const INDEX_STATEMENTS = [
   // Indexes for performance
   `CREATE INDEX IF NOT EXISTS idx_jokes_lang ON ${TABLES.JOKES}(lang)`,
   `CREATE INDEX IF NOT EXISTS idx_jokes_is_flagged ON ${TABLES.JOKES}(is_flagged)`,
+  `CREATE INDEX IF NOT EXISTS idx_jokes_style ON ${TABLES.JOKES}(style)`,
+  `CREATE INDEX IF NOT EXISTS idx_jokes_format ON ${TABLES.JOKES}(format)`,
+  `CREATE INDEX IF NOT EXISTS idx_jokes_topic ON ${TABLES.JOKES}(topic)`,
+  `CREATE INDEX IF NOT EXISTS idx_jokes_tone ON ${TABLES.JOKES}(tone)`,
+  `CREATE INDEX IF NOT EXISTS idx_jokes_lang_style ON ${TABLES.JOKES}(lang, style)`,
+  `CREATE INDEX IF NOT EXISTS idx_jokes_topic_tone ON ${TABLES.JOKES}(topic, tone)`,
   `CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON ${TABLES.USER_JOKE_FEEDBACK}(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_feedback_joke_id ON ${TABLES.USER_JOKE_FEEDBACK}(joke_id)`,
   `CREATE INDEX IF NOT EXISTS idx_feedback_sentiment ON ${TABLES.USER_JOKE_FEEDBACK}(sentiment)`,

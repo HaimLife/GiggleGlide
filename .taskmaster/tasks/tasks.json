@@ -145,7 +145,7 @@
           1,
           2
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -197,7 +197,7 @@
               4
             ],
             "details": "Add pull-to-refresh gesture as fallback for next joke. Create action buttons below card for accessibility (like/neutral/dislike buttons). Implement VoiceOver/TalkBack labels for all interactive elements. Add keyboard navigation support for accessibility. Create gesture hints for first-time users. Ensure all animations respect reduced motion settings. Test with screen readers on both platforms.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test with VoiceOver on iOS and TalkBack on Android, verify all actions accessible via buttons, test reduced motion mode"
           }
         ]
@@ -213,7 +213,7 @@
           2,
           3
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": []
       },
       {
@@ -227,7 +227,7 @@
           1,
           2
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -279,7 +279,7 @@
               3
             ],
             "details": "Create LanguageChip component showing current language code/flag. Add to top navigation bar across all screens. Implement dropdown or modal for quick language switching without entering settings. Update all screens immediately when language changes. Add subtle animation for language change feedback. Ensure chip doesn't interfere with navigation gestures. Cache frequently used languages for quick access.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test language switches immediately update all UI text, chip appears consistently, quick switch works smoothly"
           }
         ]
@@ -374,7 +374,7 @@
         "dependencies": [
           7
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -426,7 +426,7 @@
               4
             ],
             "details": "Create base repository class with generic CRUD operations. Implement specific repositories: JokeRepository (get_random_unseen, get_by_tags, mark_as_seen), UserRepository (get_or_create_by_device_uuid, update_preferences), TagRepository (get_all_by_category, get_popular), FeedbackRepository (record_feedback, get_user_sentiment_stats). Add methods for bulk operations and complex queries. Implement query optimization with eager loading where needed. Add comprehensive error handling and logging.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit test each repository method, test concurrent operations, verify query performance, test error scenarios"
           }
         ]
@@ -490,7 +490,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T15:22:16.429Z",
-      "updated": "2025-07-11T16:02:38.536Z",
+      "updated": "2025-07-11T16:44:29.716Z",
       "description": "Tasks for master context"
     }
   }
